@@ -1,0 +1,68 @@
+MIT License
+
+Copyright (c) 2026 Book Wishlist Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+===============================================================================
+
+ADDITIONAL DISCLAIMER
+
+The section below restates and clarifies the intent of the MIT License above.
+It grants no additional restrictions. Where any wording here could be read as
+conflicting with the MIT License, the MIT License text above prevails.
+
+1. FREEDOM OF USE
+   This code is free for anyone to use, study, modify, merge, publish,
+   distribute, sublicense, and sell, for personal, educational, or commercial
+   purposes, with or without attribution beyond the copyright notice required
+   above. No permission needs to be requested. No royalty is owed.
+
+2. NO LIABILITY WHATSOEVER
+   The copyright holders and contributors are released from any and all legal
+   claims, lawsuits, demands, damages, losses, costs, or expenses of any kind
+   arising from or connected to this software or its source code. This
+   includes, without limitation: direct, indirect, incidental, special,
+   exemplary, punitive, and consequential damages; financial loss; loss of
+   profits, revenue, business, or goodwill; and the cost of substitute
+   software or services. This applies whether or not the copyright holders
+   were advised of the possibility of such damage, and regardless of the
+   legal theory relied upon.
+
+3. LOCAL DATA STORAGE — NO BACKUP, NO RECOVERY
+   This application stores all of its data locally on the user's own device
+   and performs no automatic backup or synchronization. Data may be lost
+   permanently if the application is uninstalled, if the device's storage is
+   cleared, if the browser or system evicts stored data, or if the device is
+   lost, reset, or damaged. Responsibility for backing up any important data
+   rests entirely with the user. The copyright holders accept no liability for
+   any loss or corruption of data.
+
+4. UNOFFICIAL BUILDS
+   Builds of this application may be distributed outside of official app
+   stores (for example, as a debug APK installed via sideloading). Such builds
+   undergo no store review process. Anyone who installs or distributes them
+   does so at their own risk and assumes full responsibility for doing so.
+
+5. NO WARRANTY OF FITNESS
+   This software is provided "as is". No warranty is given that it is free of
+   defects, that it will operate without interruption, that it is fit for any
+   particular purpose, or that it complies with the laws or regulations of any
+   jurisdiction. Verifying its suitability for a given use is the sole
+   responsibility of the user.

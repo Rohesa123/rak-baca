@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/**
+ * Token warna semantik. Utility Tailwind seperti `bg-surface` dikompilasi jadi
+ * `var(--color-surface)`, jadi mode gelap cukup ditangani dengan menimpa
+ * variabelnya di bawah — markup-nya tidak perlu ditaburi varian `dark:`.
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-elevated: #f4f4f5;
+  --color-border: #e4e4e7;
+  --color-ink: #18181b;
+  --color-muted: #71717a;
+  --color-brand: #7c3aed;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-on-danger: #ffffff;
+}
+
+/**
+ * Blok gelap ditulis dua kali dengan sengaja. CSS biasa tidak bisa memakai
+ * ulang satu blok deklarasi untuk dua selektor yang salah satunya berada di
+ * dalam media query. Alternatifnya `light-dark()`, tapi fungsi itu butuh
+ * WebView yang cukup baru — kalau tidak didukung, seluruh token gagal dan
+ * warnanya rusak total. Duplikasi ini membosankan tapi tidak bisa gagal.
+ *
+ * Jaga agar kedua blok tetap sama persis saat mengubah warna.
+ */
+
+/* Mengikuti sistem, kecuali pengguna memilih terang secara eksplisit. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-surface: #18181b;
+    --color-elevated: #27272a;
+    --color-border: #3f3f46;
+    --color-ink: #fafafa;
+    --color-muted: #a1a1aa;
+    --color-brand: #a78bfa;
+    --color-on-brand: #1e1b2e;
+    --color-danger: #f87171;
+    --color-on-danger: #2a1010;
+  }
+}
+
+/* Pilihan manual menang atas preferensi sistem. */
+:root[data-theme='dark'] {
+  --color-surface: #18181b;
+  --color-elevated: #27272a;
+  --color-border: #3f3f46;
+  --color-ink: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-brand: #a78bfa;
+  --color-on-brand: #1e1b2e;
+  --color-danger: #f87171;
+  --color-on-danger: #2a1010;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  /* Matikan pull-to-refresh: di WebView Android gerakan ini gampang terpicu
+     saat scroll daftar dan terasa seperti aplikasi nge-bug. */
+  overscroll-behavior-y: none;
+}
+
+/* Hilangkan highlight biru saat tap di Android. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/**
+ * Transisi antar halaman. Sengaja singkat dan hanya sekali jalan saat masuk —
+ * animasi keluar memerlukan halaman lama tetap ter-mount, dan itu tidak
+ * sepadan untuk gerakan sehalus ini.
+ */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-enter {
+  animation: page-enter 180ms ease-out;
+}
+
+/* Wajib dihormati: sebagian orang mengalami pusing atau mual karena gerakan
+   antarmuka, dan sistem operasinya sudah menyatakan itu. */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}

@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Capacitor
+# `android/` SENGAJA TIDAK diabaikan sejak Fase 5. Folder itu memuat editan
+# manual yang tidak bisa di-generate ulang: permission READ_MEDIA_IMAGES di
+# AndroidManifest.xml, nama aplikasi, dan ikon launcher. Kalau diabaikan,
+# semuanya hilang setiap kali CI menjalankan `npx cap add android`.
+# Artefak build di dalamnya sudah diabaikan oleh android/.gitignore bawaan.
+ios/
+
+# Catatan perencanaan internal, sengaja tidak ikut di-push.
+docs/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

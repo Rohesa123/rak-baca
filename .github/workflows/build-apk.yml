@@ -1,0 +1,135 @@
+name: Build Android APK
+
+on:
+  # APK hanya dibangun saat rilis ditandai, bukan di setiap push. Dengan begitu
+  # tiap berkas APK punya nomor versi yang jelas dan bisa ditelusuri ke commit
+  # tertentu — bukan sekadar "build terakhir di suatu branch" yang mustahil
+  # dibedakan setelah beberapa minggu.
+  push:
+    tags: ['v*']
+  # Memungkinkan build dipicu manual dari tab Actions untuk branch mana pun,
+  # tanpa perlu membuat tag palsu.
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    # Konteks `secrets` tidak tersedia di dalam `if:` milik step — kondisinya
+    # akan selalu bernilai kosong dan step-nya diam-diam tidak pernah jalan.
+    # Disalin ke env level job lebih dulu, karena `env` boleh membaca secrets.
+    env:
+      DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app (Vite)
+        run: npm run build
+
+      - name: Setup Java JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # Versi @capacitor/cli dan @capacitor/android dikunci mengikuti versi
+      # @capacitor/core yang terpasang. Mismatch versi mayor antar paket
+      # Capacitor adalah penyebab kegagalan build Gradle yang paling sering.
+      - name: Install Capacitor CLI and Android platform
+        run: |
+          CAP_VERSION=$(node -p "require('@capacitor/core/package.json').version")
+          echo "Capacitor core version: $CAP_VERSION"
+          npm install --no-save "@capacitor/cli@$CAP_VERSION" "@capacitor/android@$CAP_VERSION"
+
+      # Idempoten: bekerja baik saat folder android/ masih di-gitignore (dibuat
+      # dari nol tiap run) maupun setelah folder itu di-commit ke repo — yang
+      # nanti diperlukan agar editan AndroidManifest.xml tidak hilang.
+      - name: Add or sync Android platform
+        run: |
+          if [ -d "android" ]; then
+            echo "Folder android/ sudah ada -> menjalankan sync"
+            npx cap sync android
+          else
+            echo "Folder android/ belum ada -> menambahkan platform"
+            npx cap add android
+          fi
+
+      # Jaring pengaman. Runner ubuntu-latest sudah membawa Android SDK, tetapi
+      # belum tentu memuat platform persis yang dipakai template Capacitor 8
+      # (saat ini android-36). Ekstraksi memakai sed POSIX, bukan `grep -P`,
+      # supaya tidak bergantung pada dukungan PCRE maupun locale runner.
+      - name: Ensure required Android SDK platform
+        run: |
+          COMPILE_SDK=$(sed -n 's/.*compileSdkVersion[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' android/variables.gradle | head -1)
+          echo "compileSdkVersion proyek: ${COMPILE_SDK:-tidak terdeteksi}"
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" || true
+          if [ -n "$COMPILE_SDK" ] && [ ! -d "$ANDROID_HOME/platforms/android-$COMPILE_SDK" ]; then
+            echo "Platform android-$COMPILE_SDK belum tersedia, menginstall..."
+            yes | sdkmanager --licenses > /dev/null 2>&1 || true
+            sdkmanager "platforms;android-$COMPILE_SDK"
+          fi
+
+      # Tanpa langkah ini, Gradle membuat debug keystore baru di setiap run —
+      # runner selalu mesin bersih. Tanda tangan APK jadi berbeda tiap build,
+      # Android menolak memasang pembaruan di atas versi lama, dan pengguna
+      # harus uninstall lebih dulu. Karena seluruh data aplikasi ini hanya ada
+      # di perangkat, itu berarti kehilangan seluruh koleksi setiap update.
+      #
+      # Keystore debug memakai kredensial baku Android (password `android`,
+      # alias `androiddebugkey`), jadi tidak ada rahasia tambahan yang perlu
+      # disimpan selain berkasnya sendiri.
+      - name: Restore debug keystore
+        if: env.DEBUG_KEYSTORE_BASE64 != ''
+        run: |
+          mkdir -p ~/.android
+          printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          echo "Keystore dipulihkan dari secret."
+
+      - name: Warn about unstable signature
+        if: env.DEBUG_KEYSTORE_BASE64 == ''
+        run: |
+          echo "::warning::Secret DEBUG_KEYSTORE_BASE64 belum diatur. Gradle akan"\
+               "membuat keystore baru, sehingga APK ini TIDAK bisa dipasang menimpa"\
+               "versi sebelumnya — uninstall dulu, dan seluruh data akan hilang."
+
+      # chmod wajib: bit executable tidak selalu terbawa saat CLI Capacitor
+      # menyalin gradlew dari template.
+      # --no-daemon mencegah Gradle daemon menggantung dan membuat job hang.
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      # Sidik jari sertifikat dicetak supaya konsistensi antar build bisa
+      # diperiksa langsung dari log. Kalau nilainya berubah antara dua run,
+      # APK yang baru tidak akan bisa dipasang menimpa yang lama.
+      - name: Print signing fingerprint
+        working-directory: android
+        run: |
+          keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk \
+            | grep -E 'SHA256:|Owner:' || echo "Sidik jari tidak terbaca."
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          # `ref_name` berisi nama tag saat dipicu tag, atau nama branch saat
+          # dijalankan manual — jadi artifact-nya selalu bisa dikenali asalnya.
+          name: rak-baca-${{ github.ref_name }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          # Gagalkan job kalau APK ternyata tidak terbentuk, daripada sukses
+          # dengan artifact kosong.
+          if-no-files-found: error
+          retention-days: 30
