@@ -3,17 +3,38 @@ import type { ImageBlob, Taxonomy, Work, WorkImage } from './models';
 import { seedTaxonomies } from './seed.taxonomies';
 
 /**
- * Database v2. Sengaja **bernama lain** dari `book-wishlist` milik v1, dan
- * dimulai dari `version(1)` tanpa migrasi apa pun.
+ * ============================================================================
+ * JANGAN UBAH SCHEMA DI BAWAH INI TANPA DIDISKUSIKAN LEBIH DULU.
+ * ============================================================================
  *
- * Itu mungkin karena belum ada satu pun APK yang terpasang di lapangan, jadi
+ * Sejak v1.0.0 dirilis, aplikasi ini sudah terpasang dan menyimpan data
+ * sungguhan di perangkat — milik pengembang sendiri maupun siapa pun yang
+ * mengunduh APK-nya. Data itu **tidak ada salinannya di mana pun** —
+ * tidak ada server, tidak ada sinkronisasi, tidak ada cadangan otomatis. Kalau
+ * sebuah perubahan schema merusaknya, tidak ada yang bisa memulihkan.
+ *
+ * Konsekuensinya, mulai sekarang setiap perubahan bentuk data wajib:
+ *
+ *   1. Naik ke `db.version(n + 1)`, tidak pernah menyunting `version(1)`
+ *   2. Menyediakan `.upgrade()` yang memindahkan data lama ke bentuk baru
+ *   3. Diuji terhadap database yang sudah berisi, bukan database kosong
+ *
+ * Menyunting string `stores()` di bawah tanpa menaikkan nomor versi adalah
+ * kesalahan yang paling mudah dilakukan dan paling mahal akibatnya: Dexie akan
+ * menolak membuka database milik pengguna lama, dan aplikasi gagal dijalankan
+ * pada perangkat yang justru paling banyak datanya.
+ *
+ * ---
+ *
+ * Sejarahnya, untuk konteks. Database ini sengaja **bernama lain** dari
+ * `book-wishlist` milik v1 dan dimulai dari `version(1)` tanpa migrasi apa pun.
+ * Itu boleh dilakukan saat itu karena belum ada satu pun APK di lapangan, jadi
  * tidak ada data yang perlu diselamatkan — database lama cukup ditinggalkan.
- * Migrasi Dexie adalah bagian yang paling sulit diuji tanpa data sungguhan,
- * dan bug di dalamnya baru muncul di perangkat pengguna saat sudah terlambat;
- * menghindarinya sepenuhnya jauh lebih aman daripada menulisnya dengan hati-hati.
+ * Migrasi Dexie adalah bagian yang paling sulit diuji tanpa data sungguhan, dan
+ * bugnya baru muncul di perangkat pengguna saat sudah terlambat; menghindarinya
+ * sepenuhnya lebih aman daripada menulisnya dengan hati-hati.
  *
- * Jendela itu tertutup begitu APK dipakai menyimpan data sungguhan. Sesudah
- * itu, setiap perubahan schema wajib lewat `version(n).upgrade()`.
+ * Kemewahan itu sudah habis. Jendelanya tertutup di v1.0.0.
  *
  * Penanda indeks: `*` multi-entry, `&` unique, `[a+b]` compound.
  */
