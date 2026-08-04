@@ -2,33 +2,65 @@
 
 A personal reading log that runs entirely offline. No server, no account, no network calls — everything lives on the device.
 
-It exists to answer one question: *what was I reading, and where did I stop?* Point it at the manga, web novels, and articles you read online for free, and it remembers the title, your progress, and the link back.
+It exists to answer one question: *what was I reading, and where did I stop?*
 
-Built as a web app with **Vite + React 19 + TypeScript**, then packaged into an Android APK with **Capacitor**. The APK is compiled by GitHub Actions, so no local Android SDK is required.
+Most reading trackers are built around books you own or intend to buy. This one is built around the things people actually read for free online — manga, manhwa, web novels, short stories, papers, articles — where nothing remembers your place for you and a note-taking app quickly turns into an unsearchable mess. Point it at what you are reading, and it keeps the title, the chapter you reached, and the link back.
+
+*Rak baca* is Indonesian for "reading shelf".
 
 ## Features
 
-- Add books with title, author, category, tags, status, priority, and notes
-- Pick a cover image from the device gallery; images are resized and compressed before storage
-- Manage categories (with colours) and tags, with duplicate-name validation
-- Search by title or author; filter by status, category, and tags; sort four ways
-- Light / dark / follow-system theme, remembered across sessions
+**Tracking what you read**
+
+- Record a work with its title, an alternative title for works known under more than one name, author, synopsis, private notes, and a link back to the source
+- Track progress in chapters or pages, with or without a known total, and jump forward one unit at a time
+- Progress is hidden entirely for formats where it makes no sense — a short story or an article has no chapter to remember
+- Reading status is derived from progress rather than set by hand, so it can never contradict the numbers
+- Mark favourites, give a personal rating, and record when you finished
+
+**Organising**
+
+- Four independent axes — type, genre, theme, and publication status — each fully editable, with 55 sensible defaults seeded on first run
+- Search across titles and authors
+- Filter by any combination of axes, **including exclusion**: "mystery, but not romance" is a single query
+- Sort several ways, and select multiple works to delete at once
+
+**Images**
+
+- Attach several images per work, not just one cover, and reorder them
+- Crop before saving, or re-crop later without re-picking the file
+- Images are resized and re-encoded to WebP, so a multi-megabyte phone photo lands in the tens of kilobytes
+- Full-size blobs are stored separately from thumbnails, so browsing a gallery never loads more than it shows
+
+**Everything else**
+
+- Export the whole collection to a ZIP and import it back — merge-only and idempotent, so importing the same file twice changes nothing
+- Indonesian and English throughout
+- Light, dark, or follow-system theme, plus a custom accent colour whose text contrast is computed rather than guessed
 - Android hardware back button, splash screen, themed status bar, and haptics
+
+## Offline by design
+
+The app never makes a network request. That is not a limitation waiting to be lifted — it is the point. There is no account to create, no sync to configure, nothing to keep paying for, and no server that can disappear and take your notes with it.
+
+The trade-off is real and worth stating plainly: **nothing is backed up automatically.** If the app is uninstalled or its storage is cleared, the data is gone. The ZIP export exists for exactly this reason, and it is worth using.
 
 ## Tech stack
 
 | Concern | Choice | Why |
 | --- | --- | --- |
 | Build | Vite 8 | Fast dev server, simple production output |
-| UI | React 19 + TypeScript | — |
+| UI | React 19 + TypeScript 6 | — |
 | Styling | Tailwind CSS 4 | Zero runtime — CSS is generated at build time, adding no JavaScript |
-| Components | Radix UI (alert dialog) | Headless and tree-shakeable; accessible focus handling out of the box |
-| Icons | Lucide | MIT-licensed, tree-shakeable, consistent stroke weight across the set |
-| Local database | Dexie 4 (IndexedDB) | Identical behaviour in Chrome and the Android WebView, so every feature is testable in the browser |
-| Reactivity | `dexie-react-hooks` | `useLiveQuery` re-renders components when the database changes |
-| UI state | Zustand 5 | ~1 KB; holds filters and theme only — book data stays in Dexie |
-| Routing | React Router 8 | Hash router, which avoids 404s on refresh under both dev and Capacitor origins |
-| Native shell | Capacitor 8 | Camera, App, Preferences, Splash Screen, Status Bar, Haptics |
+| Components | Radix UI (dialog, alert dialog) | Headless and tree-shakeable; accessible focus handling out of the box |
+| Icons | Lucide | MIT-licensed, tree-shakeable, consistent stroke weight |
+| Local database | Dexie 4 (IndexedDB) | Behaves identically in Chrome and the Android WebView, so nearly every feature is testable in a browser |
+| Reactivity | `dexie-react-hooks` | `useLiveQuery` re-renders components when the data changes |
+| UI state | Zustand 5 | ~1 KB; holds filters and preferences only — the works themselves stay in Dexie |
+| Routing | React Router 8 | Hash router, which sidesteps origin differences between the dev server and Capacitor |
+| Cropping | react-easy-crop | Capacitor's native `editPhoto` is not implemented on web, which would have made cropping untestable |
+| Archives | fflate | ~8 KB and synchronous; a full ZIP library would have cost more than the feature |
+| Native shell | Capacitor 8 | Camera, App, Preferences, Splash Screen, Status Bar, Haptics, Filesystem, Share |
 
 ## Getting started
 
@@ -40,13 +72,13 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints and enable the device toolbar in Chrome DevTools for a mobile-sized viewport. Because the app uses IndexedDB through Dexie, nearly every feature can be exercised in the browser without building an APK.
+Open the URL Vite prints and turn on the device toolbar in Chrome DevTools for a phone-sized viewport. Because storage goes through Dexie and IndexedDB, almost everything can be exercised in the browser without building an APK.
 
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Development server with hot reload |
 | `npm run build` | Type-check and build to `dist/` |
-| `npm run preview` | Preview the production build |
+| `npm run preview` | Serve the production build |
 | `npm run lint` | Run ESLint |
 
 ## Project structure
@@ -55,80 +87,93 @@ Open the URL Vite prints and enable the device toolbar in Chrome DevTools for a 
 src/
 ├─ app/          Router and layout shell
 ├─ components/
-│  ├─ ui/        Primitives: Button, TextField, Chip, Select, ConfirmDialog…
-│  └─ book/      BookCard, BookForm, CoverPicker, TagPicker, BookCover
-├─ db/           Dexie instance, schema, and one repository per table
-├─ features/     Page-level screens: books, categories, tags, settings
+│  ├─ ui/        Primitives: Button, Chip, FilterChip, Select, ConfirmDialog…
+│  └─ work/      WorkCard, WorkForm, ImageViewer, CropDialog, TagPicker…
+├─ db/           Dexie instance, models, seeds, and one repository per concern
+├─ features/     Page-level screens: works, taxonomies, settings
 ├─ hooks/        useTheme, useBackButton, useObjectUrl
-├─ lib/          image processing, platform detection, native wrappers
-└─ stores/       Zustand stores for UI and theme state
+├─ i18n/         Message catalogue and the useT hook
+├─ lib/          Images, colour maths, ZIP backup, native wrappers, IDs
+└─ stores/       Zustand stores for UI state
 ```
 
-Components never touch Dexie directly — all queries go through `src/db/*.repo.ts`. That keeps query logic in one place and means a future storage change would only touch that folder.
+Components never touch Dexie directly — every query goes through `src/db/*.repo.ts`. That keeps query logic in one place and confines the blast radius of a future storage change to a single folder.
+
+The message catalogue is typed so that the English record must have a key for every Indonesian one. A missing translation is a build error, not something discovered later by a user.
 
 ## Data model
 
 ```ts
 db.version(1).stores({
-  books:      'id, title, author, categoryId, *tagIds, status, createdAt',
-  categories: 'id, &name, createdAt',
-  tags:       'id, &name, createdAt',
-  covers:     'id, bookId',
+  works:
+    'id, title, altTitle, author, typeId, *themeIds, *genreIds, pubStatusId, ' +
+    'ageRating, lastReadAt, personalRating, favoritedAt, finishedAt, ' +
+    'primaryImageId, createdAt',
+
+  taxonomies: 'id, kind, name, &[kind+name], createdAt',
+  images:     'id, workId, [workId+role], role, sortOrder',
+  imageBlobs: 'id',
 });
 ```
 
-Two details worth knowing:
+Four decisions worth knowing:
 
-- `*tagIds` is a multi-entry index, so the many-to-many relationship between books and tags needs no join table while staying indexed.
-- Cover blobs live in their own table. Keeping them inline on `books` would mean every list query pulled hundreds of kilobytes of image data into memory just to render titles.
-
-Cover images are resized so the longest edge is 800 px and re-encoded as JPEG at quality 0.8. A 5 MB phone photo typically lands around 40–120 KB.
+- **One taxonomy table, discriminated by `kind`.** Types, genres, themes, and publication statuses behave identically — create, rename, recolour, delete, count usages. Four near-identical tables would have meant four near-identical repositories.
+- **`&[kind+name]` rather than `&name`.** Two genres cannot share a name, but a genre and a theme may. Those are different axes, and a work can legitimately be tagged with both.
+- **`favoritedAt` is a timestamp, not a boolean.** IndexedDB cannot index booleans, so a `isFavorite: true` field could not be queried efficiently. A nullable timestamp indexes cleanly and records *when*, which is strictly more information.
+- **Blobs live apart from thumbnails.** Keeping full-size images inline would mean a gallery grid pulled megabytes into memory just to draw postage stamps.
 
 ## Building the APK
 
-No Android SDK is needed locally. [build-apk.yml](.github/workflows/build-apk.yml) builds the web app, syncs it into the Capacitor Android project, and runs Gradle.
+No local Android SDK is required. [build-apk.yml](.github/workflows/build-apk.yml) builds the web app, syncs it into the Capacitor project, and runs Gradle on a GitHub runner.
 
-Ordinary pushes build nothing. An APK is produced only when a release is tagged:
+Ordinary pushes build nothing. What happens depends entirely on the trigger:
+
+| Trigger | Output | Where it goes |
+| --- | --- | --- |
+| Push a `v*` tag | **Signed release APK** | Attached to the GitHub release, kept indefinitely |
+| **Run workflow** in the Actions tab | Debug APK | Workflow artifact, expires in 30 days |
 
 ```bash
-git tag v1.0.0 && git push --tags
+git tag v1.0.0 && git push origin v1.0.0
 ```
 
-Every APK therefore carries a version number and traces back to one specific commit, rather than being an anonymous "latest build". The workflow can also be run by hand from the Actions tab against any branch.
+Every APK therefore carries a version number and traces back to one specific commit, instead of being an anonymous "latest build". Android will ask for permission to install from an unknown source.
 
-To collect the result:
+### Signing
 
-1. Open the **Actions** tab on GitHub
-2. Select the most recent **Build Android APK** run
-3. Download the `rak-baca-<tag>` artifact
-4. Extract it and install `app-debug.apk` on the device
+Release builds are signed with a keystore held in GitHub Secrets — `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`. The credentials are read from the environment and never from a file in the repository, and the whole signing block is skipped when they are absent, so local and debug builds behave exactly as before.
 
-Android will ask permission to install from an unknown source. The build can also be triggered manually with **Run workflow** in the Actions tab.
+This matters more than it might appear. A CI runner starts clean every time, so without a stored keystore Gradle generates a fresh random one on each run. The signature would then differ between builds, Android would refuse to install an update over the previous version, and the only way forward would be to uninstall — which, for an app whose data exists nowhere else, means losing the entire collection.
 
-The output is a **debug build** signed with the default debug keystore — fine for personal use, not ready for the Play Store.
+`versionCode` is supplied by CI from the run number rather than hardcoded, for the same reason: an Android update must carry a strictly higher `versionCode` than the version it replaces.
+
+Two consequences to be aware of:
+
+- **The keystore must be backed up outside the repository.** Losing it means never again being able to ship an update that installs over an existing one. There is no recovery path.
+- **Debug and release builds cannot replace each other**, because their signatures differ. Starting straight from a release build avoids the problem entirely.
 
 ## Android notes
 
 | Item | Value |
 | --- | --- |
+| `applicationId` | `id.co.dak.rakbaca` |
 | `minSdkVersion` | 26 (Android 8.0), so adaptive launcher icons apply on every supported device |
 | `compileSdk` / `targetSdk` | 36 |
-| Permissions | `READ_MEDIA_IMAGES`, plus `READ_EXTERNAL_STORAGE` capped at API 32. `CAMERA` is deliberately omitted — the app only picks from the gallery |
-| `appId` | `com.example.bookwishlist` — **must be changed before any Play Store release**, and changing it after the fact means renaming the Java package by hand |
+| Permissions | `READ_MEDIA_IMAGES`, plus `READ_EXTERNAL_STORAGE` capped at API 32. `CAMERA` is deliberately **not** requested — the app only ever picks from the gallery |
+| Binary assets | None. The launcher icon and splash screen are vector drawables, so there is no per-density PNG to keep in sync |
 
-The `android/` directory is committed on purpose. It holds hand-edited files that cannot be regenerated: the manifest permissions, the app name, and the launcher icon. Build artefacts inside it are excluded by Capacitor's own `android/.gitignore`.
+`minifyEnabled` is deliberately off for release builds. R8 strips classes reached only by reflection, which is precisely how Capacitor's JavaScript bridge works; enabling it without a tested set of keep rules risks plugins failing silently in the release APK while debug builds look healthy.
+
+The `android/` directory is committed on purpose. It holds hand-edited files that cannot be regenerated — manifest permissions, the app name, the launcher icon, and the signing configuration. Build artefacts inside it are excluded by Capacitor's own `android/.gitignore`.
 
 ## Status
 
-The app is feature-complete for its first release: the data layer, all screens, cover images, and the native polish are done and working in the browser.
+Feature-complete for the first release. The data layer, every screen, images, export and import, both languages, and the native polish are done and verified in the browser.
 
-What has not been confirmed yet is behaviour on real hardware — gallery permissions, EXIF orientation of real photos, the physical back button, and data persistence after a force-stop. Those can only be checked once the APK is installed on a device.
+What has **not** been confirmed is behaviour on real hardware. Gallery permission prompts, the native picker, EXIF orientation on real photos, the physical back button, and persistence after a force-stop can only be checked on a device. Treat the first install as a test.
 
-Not started: page transitions, JSON export/import, ISBN scanning, list virtualisation, and a signed release build.
-
-## A note on your data
-
-This app performs **no automatic backup**. Data is lost permanently if the app is uninstalled or its storage is cleared. An export feature is on the roadmap but not implemented.
+Not implemented: manual drag-and-drop ordering, list virtualisation, collection statistics, sharing a list as text, and an AAB bundle for the Play Store.
 
 ## License
 
