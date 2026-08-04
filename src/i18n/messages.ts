@@ -41,6 +41,9 @@ export const id = {
   'common.all': 'Semua',
 
   // daftar karya
+  // Judul halaman menyebut isinya, bukan nama aplikasi — nama aplikasi sudah
+  // hadir di peluncur, splash, dan judul jendela. Kebetulan dalam bahasa
+  // Indonesia keduanya sama bunyinya.
   'works.title': 'Rak Baca',
   'works.empty': 'Rak masih kosong',
   'works.count': '{count} karya tercatat',
@@ -56,11 +59,16 @@ export const id = {
   'works.selectedCount': '{count} dipilih',
   'works.exported': '{count} karya diekspor.',
   'works.exportFailed': 'Gagal membuat cadangan.',
+  'works.deleteSelected': 'Hapus {count} karya?',
+  'works.deleteSelectedBody':
+    '{count} karya akan dihapus permanen beserta seluruh gambarnya. Tindakan ini tidak bisa dibatalkan.',
+  'works.deleted': '{count} karya dihapus.',
   'works.filterType': 'Tipe',
   'works.filterPubStatus': 'Status terbit',
   'works.filterSort': 'Urutkan',
   'works.filterNoType': 'Tanpa tipe',
   'works.filterMustHaveAll': '(harus punya semua)',
+  'works.filterCycleHint': 'Ketuk sekali untuk menyertakan, sekali lagi untuk mengecualikan.',
 
   // kartu karya
   'card.open': 'Buka {title}',
@@ -101,10 +109,12 @@ export const id = {
   'taxonomy.theme': 'Tema',
   'taxonomy.genre': 'Genre',
   'taxonomy.pubstatus': 'Status',
-  'taxonomy.type.hint': 'Bentuk karyanya: Manga, Novel, Cerpen, Karya Ilmiah',
-  'taxonomy.theme.hint': 'Tentang apa: Isekai, Sekolah, Sejarah',
-  'taxonomy.genre.hint': 'Rasanya seperti apa: Drama, Romansa, Aksi',
-  'taxonomy.pubstatus.hint': 'Status terbit: Ongoing, Tamat, Hiatus, Dikapak',
+  // Contohnya sengaja memakai nama bawaan apa adanya — kalau diterjemahkan,
+  // petunjuknya menyebut nilai yang tidak akan pengguna temukan di daftar.
+  'taxonomy.type.hint': 'Bentuk karyanya: Manga, Novel, Short Story, Academic Paper',
+  'taxonomy.theme.hint': 'Tentang apa: Isekai, School, Historical',
+  'taxonomy.genre.hint': 'Rasanya seperti apa: Drama, Romance, Action',
+  'taxonomy.pubstatus.hint': 'Status terbit: Ongoing, Completed, Hiatus, Axed',
 
   // pengaturan
   'settings.title': 'Pengaturan',
@@ -298,7 +308,7 @@ export const en: Record<MessageKey, string> = {
   'common.unknown': 'Unknown',
   'common.all': 'All',
 
-  'works.title': 'Rak Baca',
+  'works.title': 'Reading shelf',
   'works.empty': 'Your shelf is empty',
   'works.count': '{count} {count|title|titles} tracked',
   'works.searchPlaceholder': 'Search title, author, synopsis, notes',
@@ -313,11 +323,16 @@ export const en: Record<MessageKey, string> = {
   'works.selectedCount': '{count} selected',
   'works.exported': 'Exported {count} {count|title|titles}.',
   'works.exportFailed': 'Could not create the backup.',
+  'works.deleteSelected': 'Delete {count} {count|title|titles}?',
+  'works.deleteSelectedBody':
+    '{count} {count|title|titles} and all of their images will be deleted permanently. This cannot be undone.',
+  'works.deleted': 'Deleted {count} {count|title|titles}.',
   'works.filterType': 'Type',
   'works.filterPubStatus': 'Publication status',
   'works.filterSort': 'Sort by',
   'works.filterNoType': 'No type',
   'works.filterMustHaveAll': '(must have all)',
+  'works.filterCycleHint': 'Tap once to include, tap again to exclude.',
 
   'card.open': 'Open {title}',
   'card.favorite': 'Favorite',
@@ -352,8 +367,8 @@ export const en: Record<MessageKey, string> = {
   'taxonomy.theme': 'Theme',
   'taxonomy.genre': 'Genre',
   'taxonomy.pubstatus': 'Status',
-  'taxonomy.type.hint': 'The form it takes: Manga, Novel, Short story, Paper',
-  'taxonomy.theme.hint': 'What it is about: Isekai, School, History',
+  'taxonomy.type.hint': 'The form it takes: Manga, Novel, Short Story, Academic Paper',
+  'taxonomy.theme.hint': 'What it is about: Isekai, School, Historical',
   'taxonomy.genre.hint': 'How it feels: Drama, Romance, Action',
   'taxonomy.pubstatus.hint': 'Publication status: Ongoing, Completed, Hiatus, Axed',
 

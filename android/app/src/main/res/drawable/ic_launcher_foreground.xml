@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Lapisan depan ikon adaptif: pembatas buku putih di atas latar ungu.
+  Lapisan depan ikon adaptif: buku putih dengan pita pembatas terselip.
 
-  Sebelumnya berupa buku terbuka, tapi bentuk itu menyiratkan "sedang membaca",
-  bukan "menandai tempat berhenti" — sementara justru itu inti aplikasinya.
-  Pembatas buku menyampaikannya langsung dan tetap terbaca pada ukuran kecil.
+  Riwayat bentuknya: mula-mula buku terbuka, lalu diganti pembatas murni, dan
+  keduanya timpang. Buku terbuka menyiratkan "sedang membaca" tanpa gagasan
+  menandai; pembatas murni menyampaikan penandaan tapi kehilangan identitas
+  bukunya. Gabungan keduanya menyampaikan keduanya sekaligus.
 
-  Ditulis sebagai vector drawable, bukan PNG per kepadatan layar, supaya proyek
-  ini tidak perlu menyimpan aset biner sama sekali.
+  Alur bacanya: persegi membulat dengan alur punggung = buku, pita menjuntai
+  dari sisi atas = tempat berhenti.
 
-  Kanvas ikon adaptif berukuran 108x108dp dengan zona aman di bagian tengah
-  72x72dp. Gambar digambar dalam koordinat 24x24 lalu diskalakan 2,333x dan
-  digeser 26dp, sehingga menempati 26..82 — masih di dalam zona aman.
+  Bentuk ungu digambar di atas badan putih untuk meniru lubang. Warnanya harus
+  tetap sama dengan `@color/ic_launcher_background` di values — kalau warna
+  latar diubah, dua nilai di berkas ini ikut diubah.
+
+  Kanvas ikon adaptif 108x108dp dengan zona aman 72x72dp di tengah. Digambar
+  dalam koordinat 24x24 lalu diskalakan 2,333x dan digeser 26dp, sehingga
+  menempati 26..82 — masih di dalam zona aman.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -25,10 +30,19 @@
         android:scaleX="2.3333"
         android:scaleY="2.3333">
 
-        <!-- Badan pembatas dengan takik segitiga di bawah. Sudut atas sedikit
-             dibulatkan agar tidak terlihat kaku pada mask berbentuk lingkaran. -->
+        <!-- Badan buku -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M7,2.5 L17,2.5 A1.5,1.5 0 0,1 18.5,4 L18.5,21.5 L12,16.8 L5.5,21.5 L5.5,4 A1.5,1.5 0 0,1 7,2.5 Z" />
+            android:pathData="M6,2.5 L18,2.5 A1.5,1.5 0 0,1 19.5,4 L19.5,20 A1.5,1.5 0 0,1 18,21.5 L6,21.5 A1.5,1.5 0 0,1 4.5,20 L4.5,4 A1.5,1.5 0 0,1 6,2.5 Z" />
+
+        <!-- Alur punggung. Tanpa ini badannya terbaca sebagai kartu biasa. -->
+        <path
+            android:fillColor="#7C3AED"
+            android:pathData="M7.3,2.5 L8.5,2.5 L8.5,21.5 L7.3,21.5 Z" />
+
+        <!-- Pita pembatas dengan takik segitiga di ujung bawah -->
+        <path
+            android:fillColor="#7C3AED"
+            android:pathData="M13.2,2.5 L16.4,2.5 L16.4,13.6 L14.8,11.8 L13.2,13.6 Z" />
     </group>
 </vector>

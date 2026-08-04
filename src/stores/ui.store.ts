@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ReadingStatus, WorkSort } from '../db/models';
+import type { FilterState } from '../components/ui/FilterChip';
 
 interface UiState {
   query: string;
@@ -11,6 +12,8 @@ interface UiState {
   pubStatusId: string | null | undefined;
   themeIds: string[];
   genreIds: string[];
+  excludeThemeIds: string[];
+  excludeGenreIds: string[];
   readingStatus: ReadingStatus | null;
   favoritesOnly: boolean;
   sort: WorkSort;
@@ -18,8 +21,10 @@ interface UiState {
   setQuery: (query: string) => void;
   setTypeId: (typeId: string | null | undefined) => void;
   setPubStatusId: (pubStatusId: string | null | undefined) => void;
-  toggleTheme: (id: string) => void;
-  toggleGenre: (id: string) => void;
+  cycleTheme: (id: string) => void;
+  cycleGenre: (id: string) => void;
+  themeState: (id: string) => FilterState;
+  genreState: (id: string) => FilterState;
   setReadingStatus: (status: ReadingStatus | null) => void;
   toggleFavoritesOnly: () => void;
   setSort: (sort: WorkSort) => void;
@@ -27,8 +32,23 @@ interface UiState {
   activeFilterCount: () => number;
 }
 
-function toggle(list: string[], id: string): string[] {
-  return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
+const without = (list: string[], id: string) => list.filter((item) => item !== id);
+
+/** netral → termasuk → dikecualikan → netral */
+function cycle(included: string[], excluded: string[], id: string) {
+  if (included.includes(id)) {
+    return { included: without(included, id), excluded: [...excluded, id] };
+  }
+  if (excluded.includes(id)) {
+    return { included, excluded: without(excluded, id) };
+  }
+  return { included: [...included, id], excluded };
+}
+
+function stateOf(included: string[], excluded: string[], id: string): FilterState {
+  if (included.includes(id)) return 'include';
+  if (excluded.includes(id)) return 'exclude';
+  return 'off';
 }
 
 /**
@@ -42,6 +62,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   pubStatusId: undefined,
   themeIds: [],
   genreIds: [],
+  excludeThemeIds: [],
+  excludeGenreIds: [],
   readingStatus: null,
   favoritesOnly: false,
   // Untuk catatan bacaan, "apa yang terakhir kubaca" jauh lebih sering dicari
@@ -51,8 +73,22 @@ export const useUiStore = create<UiState>((set, get) => ({
   setQuery: (query) => set({ query }),
   setTypeId: (typeId) => set({ typeId }),
   setPubStatusId: (pubStatusId) => set({ pubStatusId }),
-  toggleTheme: (id) => set((s) => ({ themeIds: toggle(s.themeIds, id) })),
-  toggleGenre: (id) => set((s) => ({ genreIds: toggle(s.genreIds, id) })),
+
+  cycleTheme: (id) =>
+    set((s) => {
+      const next = cycle(s.themeIds, s.excludeThemeIds, id);
+      return { themeIds: next.included, excludeThemeIds: next.excluded };
+    }),
+
+  cycleGenre: (id) =>
+    set((s) => {
+      const next = cycle(s.genreIds, s.excludeGenreIds, id);
+      return { genreIds: next.included, excludeGenreIds: next.excluded };
+    }),
+
+  themeState: (id) => stateOf(get().themeIds, get().excludeThemeIds, id),
+  genreState: (id) => stateOf(get().genreIds, get().excludeGenreIds, id),
+
   setReadingStatus: (readingStatus) => set({ readingStatus }),
   toggleFavoritesOnly: () => set((s) => ({ favoritesOnly: !s.favoritesOnly })),
   setSort: (sort) => set({ sort }),
@@ -65,6 +101,8 @@ export const useUiStore = create<UiState>((set, get) => ({
       pubStatusId: undefined,
       themeIds: [],
       genreIds: [],
+      excludeThemeIds: [],
+      excludeGenreIds: [],
       readingStatus: null,
       favoritesOnly: false,
       sort: 'lastRead',
@@ -77,6 +115,8 @@ export const useUiStore = create<UiState>((set, get) => ({
       (s.pubStatusId !== undefined ? 1 : 0) +
       s.themeIds.length +
       s.genreIds.length +
+      s.excludeThemeIds.length +
+      s.excludeGenreIds.length +
       (s.readingStatus ? 1 : 0) +
       (s.favoritesOnly ? 1 : 0) +
       (s.sort === 'lastRead' ? 0 : 1)

@@ -56,6 +56,14 @@ function matchesFilters(
     if (!filters.genreIds.every((id) => work.genreIds.includes(id))) return false;
   }
 
+  if (filters.excludeThemeIds?.length) {
+    if (filters.excludeThemeIds.some((id) => work.themeIds.includes(id))) return false;
+  }
+
+  if (filters.excludeGenreIds?.length) {
+    if (filters.excludeGenreIds.some((id) => work.genreIds.includes(id))) return false;
+  }
+
   if (filters.readingStatus) {
     const type = work.typeId ? typeById.get(work.typeId) : null;
     if (readingStatus(work, type) !== filters.readingStatus) return false;
@@ -214,6 +222,31 @@ async function remove(id: string): Promise<void> {
 }
 
 /**
+ * Menjepit progres ke rentang yang masuk akal.
+ *
+ * Batas atasnya `max(total, sebelumnya)`, bukan `total` begitu saja. Bedanya
+ * penting untuk satu kasus: pengguna yang menurunkan total di form sampai di
+ * bawah progres yang sudah tercatat. Menjepit lurus ke total akan diam-diam
+ * memangkas angka yang sudah dibaca; dengan rumus ini, nilai yang sudah
+ * terlanjur lewat dibiarkan apa adanya — tetap bisa diturunkan manual, tapi
+ * tidak pernah ditarik turun tanpa diminta.
+ */
+/**
+ * Progres sudah mentok di totalnya. Dipakai UI untuk menonaktifkan tombol
+ * tambah — menjepit di repo saja membuat tombolnya tetap bisa ditekan tanpa
+ * efek apa pun, dan itu terasa seperti aplikasi yang rusak.
+ */
+export function isProgressAtEnd(work: Work): boolean {
+  return work.progressTotal !== null && work.progressCurrent >= work.progressTotal;
+}
+
+function clampProgress(next: number, total: number | null, previous: number): number {
+  const floored = Math.max(0, next);
+  if (total === null) return floored;
+  return Math.min(floored, Math.max(total, previous));
+}
+
+/**
  * Menaikkan progres. Inilah aksi yang paling sering dipakai, jadi harus bisa
  * dipanggil langsung dari kartu tanpa membuka form — kalau harus lewat form,
  * pencatatan progres akan berhenti dilakukan setelah minggu pertama.
@@ -225,7 +258,11 @@ async function bumpProgress(id: string, delta = 1): Promise<void> {
     .where(':id')
     .equals(id)
     .modify((work) => {
-      work.progressCurrent = Math.max(0, work.progressCurrent + delta);
+      work.progressCurrent = clampProgress(
+        work.progressCurrent + delta,
+        work.progressTotal,
+        work.progressCurrent,
+      );
       work.lastReadAt = now;
       work.updatedAt = now;
 
@@ -247,7 +284,7 @@ async function setProgress(id: string, current: number): Promise<void> {
     .where(':id')
     .equals(id)
     .modify((work) => {
-      work.progressCurrent = Math.max(0, current);
+      work.progressCurrent = clampProgress(current, work.progressTotal, work.progressCurrent);
       work.lastReadAt = now;
       work.updatedAt = now;
     });

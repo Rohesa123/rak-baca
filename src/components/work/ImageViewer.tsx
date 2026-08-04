@@ -166,7 +166,10 @@ export function ImageViewer({
               <img
                 src={url}
                 alt={image.label ?? ''}
-                className="max-h-full min-h-0 flex-1 object-contain"
+                // `min-w-0` wajib: flex item bawaannya `min-width: auto`,
+                // sehingga gambar lebar menolak menyusut, melebarkan barisnya
+                // melebihi layar, dan mendorong tombol "berikutnya" keluar.
+                className="max-h-full min-h-0 min-w-0 flex-1 object-contain"
               />
             )}
 

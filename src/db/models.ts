@@ -146,6 +146,14 @@ export interface WorkFilters {
   themeIds?: string[];
   /** Karya harus punya **semua** genre ini. */
   genreIds?: string[];
+  /**
+   * Karya yang memuat **salah satu** nilai ini disingkirkan — semantik OR,
+   * bukan AND. "Kecuali A atau B" adalah cara orang berpikir tentang
+   * pengecualian; menuntut keduanya hadir sekaligus hampir tidak pernah
+   * berguna.
+   */
+  excludeThemeIds?: string[];
+  excludeGenreIds?: string[];
   pubStatusId?: string | null;
   ageRating?: AgeRating;
   readingStatus?: ReadingStatus;

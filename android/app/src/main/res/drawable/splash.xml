@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Layar pembuka: latar ungu merek dengan ikon aplikasi di tengah.
+
+  Sebelumnya berupa `splash.png` bawaan template Capacitor yang disimpan dalam
+  sebelas varian kepadatan dan orientasi. Diganti vector supaya proyek ini tetap
+  nol aset biner, dan supaya ikonnya digambar sekali saja — berkas ini memakai
+  ulang `ic_launcher_foreground`, jadi peluncur dan splash mustahil berbeda.
+
+  Ukuran 180dp: lapisan depan ikon adaptif berkanvas 108dp dengan isi menempati
+  bagian tengahnya saja, sehingga isi yang tampak sekitar 93dp — cukup besar
+  untuk terbaca tanpa memenuhi layar.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/ic_launcher_background" />
+
+    <item
+        android:width="180dp"
+        android:height="180dp"
+        android:gravity="center"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

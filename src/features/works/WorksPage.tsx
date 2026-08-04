@@ -17,6 +17,8 @@ import { useUiStore } from '../../stores/ui.store';
 import { WorkCard } from '../../components/work/WorkCard';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
+import { FilterChip } from '../../components/ui/FilterChip';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
@@ -28,6 +30,8 @@ export function WorksPage() {
   const pubStatusId = useUiStore((s) => s.pubStatusId);
   const themeIds = useUiStore((s) => s.themeIds);
   const genreIds = useUiStore((s) => s.genreIds);
+  const excludeThemeIds = useUiStore((s) => s.excludeThemeIds);
+  const excludeGenreIds = useUiStore((s) => s.excludeGenreIds);
   const readingStatus = useUiStore((s) => s.readingStatus);
   const favoritesOnly = useUiStore((s) => s.favoritesOnly);
   const sort = useUiStore((s) => s.sort);
@@ -35,8 +39,10 @@ export function WorksPage() {
   const setQuery = useUiStore((s) => s.setQuery);
   const setTypeId = useUiStore((s) => s.setTypeId);
   const setPubStatusId = useUiStore((s) => s.setPubStatusId);
-  const toggleTheme = useUiStore((s) => s.toggleTheme);
-  const toggleGenre = useUiStore((s) => s.toggleGenre);
+  const cycleTheme = useUiStore((s) => s.cycleTheme);
+  const cycleGenre = useUiStore((s) => s.cycleGenre);
+  const themeState = useUiStore((s) => s.themeState);
+  const genreState = useUiStore((s) => s.genreState);
   const setReadingStatus = useUiStore((s) => s.setReadingStatus);
   const toggleFavoritesOnly = useUiStore((s) => s.toggleFavoritesOnly);
   const setSort = useUiStore((s) => s.setSort);
@@ -49,6 +55,18 @@ export function WorksPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportBusy, setExportBusy] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function deleteSelected() {
+    const ids = [...selectedIds];
+    // Berurutan, bukan Promise.all: tiap penghapusan membuka transaksi Dexie
+    // sendiri yang menyentuh tiga tabel sekaligus.
+    for (const id of ids) await worksRepo.remove(id);
+
+    setConfirmDelete(false);
+    setExportMessage(t('works.deleted', { count: ids.length }));
+    leaveSelectMode();
+  }
 
   function toggleSelected(id: string) {
     setSelectedIds((current) => {
@@ -94,11 +112,24 @@ export function WorksPage() {
         pubStatusId,
         themeIds,
         genreIds,
+        excludeThemeIds,
+        excludeGenreIds,
         readingStatus: readingStatus ?? undefined,
         favoritesOnly,
         sort,
       }),
-    [query, typeId, pubStatusId, themeIds, genreIds, readingStatus, favoritesOnly, sort],
+    [
+      query,
+      typeId,
+      pubStatusId,
+      themeIds,
+      genreIds,
+      excludeThemeIds,
+      excludeGenreIds,
+      readingStatus,
+      favoritesOnly,
+      sort,
+    ],
   );
 
   const totalCount = useLiveQuery(() => worksRepo.count(), []);
@@ -135,6 +166,15 @@ export function WorksPage() {
               {t('action.cancel')}
             </Button>
             <Button
+              variant="ghost"
+              size="sm"
+              className="text-danger"
+              disabled={selectedIds.size === 0 || exportBusy}
+              onClick={() => setConfirmDelete(true)}
+            >
+              {t('action.delete')}
+            </Button>
+            <Button
               size="sm"
               disabled={selectedIds.size === 0 || exportBusy}
               onClick={() => void exportSelected()}
@@ -144,6 +184,16 @@ export function WorksPage() {
           </div>
         </div>
       )}
+
+      {/* Jumlahnya disebut eksplisit di judul maupun isi: penghapusan massal
+          jauh lebih mahal untuk disesali daripada penghapusan satuan. */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t('works.deleteSelected', { count: selectedIds.size })}
+        description={t('works.deleteSelectedBody', { count: selectedIds.size })}
+        onConfirm={() => void deleteSelected()}
+      />
 
       {exportMessage && !selectMode && (
         <p className="mt-3 text-sm text-muted">{exportMessage}</p>
@@ -263,28 +313,31 @@ export function WorksPage() {
               ))}
             </Select>
 
+            <p className="-mb-1 text-xs text-muted">{t('works.filterCycleHint')}</p>
+
             {(['genre', 'theme'] as const).map((kind) => {
               const rows = byKind(kind);
               if (rows.length === 0) return null;
 
-              const selected = kind === 'genre' ? genreIds : themeIds;
-              const toggle = kind === 'genre' ? toggleGenre : toggleTheme;
+              const included = kind === 'genre' ? genreIds : themeIds;
+              const cycleValue = kind === 'genre' ? cycleGenre : cycleTheme;
+              const stateOf = kind === 'genre' ? genreState : themeState;
 
               return (
                 <div key={kind} className="flex flex-col gap-2">
                   <span className="text-sm font-medium text-muted">
                     {t(TAXONOMY_KIND_KEY[kind])}
-                    {selected.length > 1 && ` ${t('works.filterMustHaveAll')}`}
+                    {included.length > 1 && ` ${t('works.filterMustHaveAll')}`}
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {rows.map((row) => (
-                      <Chip
+                      <FilterChip
                         key={row.id}
-                        active={selected.includes(row.id)}
-                        onClick={() => toggle(row.id)}
+                        state={stateOf(row.id)}
+                        onCycle={() => cycleValue(row.id)}
                       >
                         {row.name}
-                      </Chip>
+                      </FilterChip>
                     ))}
                   </div>
                 </div>

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Check, ExternalLink, Minus, Plus, Star } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { readingStatus, worksRepo } from '../../db/works.repo';
+import { isProgressAtEnd, readingStatus, worksRepo } from '../../db/works.repo';
 import { taxonomiesRepo } from '../../db/taxonomies.repo';
 import {
   AGE_RATING_KEY,
@@ -179,6 +179,7 @@ export function WorkDetailPage() {
               size="icon"
               aria-label={t('detail.increase')}
               onClick={() => void worksRepo.bumpProgress(work.id, 1)}
+              disabled={isProgressAtEnd(work)}
             >
               <Plus size={18} />
             </Button>

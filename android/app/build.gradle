@@ -1,5 +1,12 @@
 apply plugin: 'com.android.application'
 
+// Kredensial penandatanganan dibaca dari environment, tidak pernah dari berkas
+// di dalam repo. Kalau variabelnya kosong — misalnya saat build lokal atau
+// build debug — seluruh blok signing dilewati dan Gradle berperilaku seperti
+// sebelumnya. Jadi berkas ini aman di-commit apa adanya.
+def releaseKeystore = System.getenv("RELEASE_KEYSTORE_PATH")
+def hasReleaseSigning = releaseKeystore != null && !releaseKeystore.isEmpty()
+
 android {
     namespace = "id.co.dak.rakbaca"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +14,15 @@ android {
         applicationId "id.co.dak.rakbaca"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+
+        // Android menolak memasang APK yang versionCode-nya tidak lebih besar
+        // dari yang terpasang. Kalau angka ini tetap 1 selamanya, rilis kedua
+        // dan seterusnya mustahil dipasang sebagai pembaruan — pengguna harus
+        // uninstall, dan seluruh catatannya ikut terhapus. CI mengisinya dari
+        // nomor run yang selalu menaik; nilai 1 hanya cadangan untuk build lokal.
+        versionCode System.getenv("VERSION_CODE") ? System.getenv("VERSION_CODE").toInteger() : 1
+        versionName System.getenv("VERSION_NAME") ?: "1.0"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +30,35 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // minifyEnabled sengaja dibiarkan mati. R8 memangkas kelas yang
+            // hanya dipanggil lewat refleksi, dan jembatan JS Capacitor bekerja
+            // persis dengan cara itu — menyalakannya tanpa aturan keep yang
+            // teruji berisiko membuat plugin gagal diam-diam di APK rilis,
+            // padahal build debug tampak sehat.
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            // Tanpa penjagaan ini, Gradle gagal dengan "Keystore file not set"
+            // begitu ada yang menjalankan assembleRelease tanpa kredensial.
+            // Dilewati berarti hasilnya app-release-unsigned.apk — CI memeriksa
+            // hal itu secara terpisah dan menggagalkan build, supaya tidak ada
+            // berkas tak bertanda tangan yang lolos jadi artefak rilis.
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

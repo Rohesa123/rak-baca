@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Check, Plus, Star } from 'lucide-react';
 import type { Taxonomy, Work } from '../../db/models';
-import { readingStatus, worksRepo } from '../../db/works.repo';
+import { isProgressAtEnd, readingStatus, worksRepo } from '../../db/works.repo';
 import {
   PROGRESS_UNIT_SHORT_KEY,
   READING_STATUS_KEY,
@@ -133,7 +133,8 @@ export function WorkCard({
           type="button"
           aria-label={t('card.bumpProgress', { title: work.title })}
           onClick={() => void worksRepo.bumpProgress(work.id)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-xl bg-surface text-brand active:bg-border"
+          disabled={isProgressAtEnd(work)}
+          className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-xl bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-30"
         >
           <Plus size={20} aria-hidden="true" />
         </button>

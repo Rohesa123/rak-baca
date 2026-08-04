@@ -5,6 +5,18 @@ import { newId } from '../lib/id';
 type SeedRow = Omit<Taxonomy, 'id' | 'createdAt'>;
 
 /**
+ * Nilai bawaan sengaja berbahasa Inggris di kedua bahasa antarmuka.
+ *
+ * Alasannya: ini **data**, bukan pesan antarmuka. Begitu pengguna mengubah
+ * namanya, nilai itu jadi miliknya dan tidak boleh ikut berganti saat bahasa
+ * aplikasi diganti — sementara menerjemahkan nilai bawaan saja akan membuat
+ * separuh daftar berpindah bahasa dan separuhnya tidak. Inggris dipilih karena
+ * netral dan terbaca sebagai "bawaan pabrik" yang memang untuk disesuaikan.
+ * Sebagian besar istilahnya (Manga, Isekai, Hiatus) juga sudah dipakai apa
+ * adanya oleh pembaca Indonesia.
+ */
+
+/**
  * Tipe karya bawaan. `tracksProgress` sengaja dimatikan untuk bentuk yang
  * sekali baca selesai — cerpen dan artikel tidak punya chapter maupun halaman
  * yang berarti untuk dilacak, dan menampilkan "Ch. 0 / ?" di sana hanya derau.
@@ -17,55 +29,70 @@ const TYPES: ReadonlyArray<{
   { name: 'Manga', unit: 'chapter', tracksProgress: true },
   { name: 'Manhwa', unit: 'chapter', tracksProgress: true },
   { name: 'Manhua', unit: 'chapter', tracksProgress: true },
-  { name: 'Komik', unit: 'chapter', tracksProgress: true },
+  { name: 'Comic', unit: 'chapter', tracksProgress: true },
   { name: 'Novel', unit: 'page', tracksProgress: true },
-  { name: 'Novel Web', unit: 'chapter', tracksProgress: true },
-  { name: 'Buku Nonfiksi', unit: 'page', tracksProgress: true },
-  { name: 'Buku Anak', unit: 'page', tracksProgress: true },
-  { name: 'Karya Ilmiah', unit: 'page', tracksProgress: true },
-  { name: 'Cerpen', unit: 'page', tracksProgress: false },
-  { name: 'Artikel', unit: 'page', tracksProgress: false },
+  { name: 'Web Novel', unit: 'chapter', tracksProgress: true },
+  { name: 'Non-fiction', unit: 'page', tracksProgress: true },
+  { name: "Children's Book", unit: 'page', tracksProgress: true },
+  { name: 'Academic Paper', unit: 'page', tracksProgress: true },
+  { name: 'Short Story', unit: 'page', tracksProgress: false },
+  { name: 'Article', unit: 'page', tracksProgress: false },
 ];
 
-/** Status terbit. "Dikapak" = dihentikan sebelum tamat (istilah fandom: axed). */
+/** Status terbit. "Axed" = dihentikan penerbit sebelum tamat, istilah fandom. */
 const PUB_STATUSES: ReadonlyArray<{ name: string; color: string }> = [
   { name: 'Ongoing', color: '#10b981' },
-  { name: 'Tamat', color: '#0ea5e9' },
+  { name: 'Completed', color: '#0ea5e9' },
   { name: 'Hiatus', color: '#f59e0b' },
-  { name: 'Dikapak', color: '#ef4444' },
+  { name: 'Axed', color: '#ef4444' },
 ];
 
 /** Genre menjawab "rasanya seperti apa". */
 const GENRES: readonly string[] = [
-  'Aksi',
-  'Petualangan',
-  'Komedi',
+  'Action',
+  'Adventure',
+  'Comedy',
   'Drama',
-  'Fantasi',
-  'Horor',
-  'Misteri',
-  'Romansa',
+  'Fantasy',
+  'Horror',
+  'Mystery',
+  'Romance',
   'Sci-Fi',
   'Slice of Life',
-  'Olahraga',
-  'Psikologis',
-  'Edukasi',
+  'Sports',
+  'Psychological',
+  'Educational',
+  'Thriller',
+  'Supernatural',
+  'Tragedy',
+  'Detective',
+  'Parody',
+  'Martial Arts',
+  'Mecha',
 ];
 
 /** Tema menjawab "tentang apa". */
 const THEMES: readonly string[] = [
   'Isekai',
-  'Sekolah',
-  'Reinkarnasi',
-  'Regresi',
-  'Kultivasi',
-  'Sistem',
+  'School',
+  'Reincarnation',
+  'Regression',
+  'Cultivation',
+  'System',
   'Dungeon',
-  'Militer',
-  'Memasak',
-  'Musik',
+  'Military',
+  'Cooking',
+  'Music',
   'Villainess',
-  'Sejarah',
+  'Historical',
+  'Revenge',
+  'Royalty',
+  'Magic Academy',
+  'Apocalypse',
+  'Politics',
+  'Idol',
+  'Transmigration',
+  'Harem',
 ];
 
 function buildRows(): SeedRow[] {

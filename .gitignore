@@ -23,6 +23,22 @@ ios/
 # Catatan perencanaan internal, sengaja tidak ikut di-push.
 docs/
 
+# Kunci penandatanganan. JANGAN PERNAH di-commit, termasuk ke repo privat.
+#
+# Kunci yang bocor memungkinkan siapa pun menerbitkan APK yang oleh Android
+# dianggap pembaruan sah dari aplikasi ini, lengkap dengan akses ke seluruh
+# data yang tersimpan. Riwayat Git bersifat permanen: sekali ter-commit dan
+# ter-push, menghapusnya di commit berikutnya tidak menolong — kuncinya harus
+# dianggap hangus dan diganti.
+#
+# Template Capacitor sebenarnya menyediakan pola ini di android/.gitignore
+# tetapi dalam keadaan dikomentari, dan pola itu pun tidak berlaku untuk
+# berkas di luar android/. Karena itu ditegaskan di sini.
+*.keystore
+*.jks
+*.p12
+keystore.properties
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
