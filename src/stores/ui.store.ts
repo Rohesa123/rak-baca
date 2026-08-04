@@ -1,9 +1,11 @@
 import { create } from 'zustand';
-import type { ReadingStatus, WorkSort } from '../db/models';
+import type { ReadingStatus, SearchField, WorkSort } from '../db/models';
 import type { FilterState } from '../components/ui/FilterChip';
 
 interface UiState {
   query: string;
+  /** Cakupan pencarian. Bawaannya menyeluruh, sama seperti sebelumnya. */
+  searchField: SearchField;
   /**
    * Tri-state, mengikuti semantik `WorkFilters`: `undefined` = semua,
    * `null` = hanya yang belum diisi, string = nilai tertentu.
@@ -19,6 +21,7 @@ interface UiState {
   sort: WorkSort;
 
   setQuery: (query: string) => void;
+  setSearchField: (field: SearchField) => void;
   setTypeId: (typeId: string | null | undefined) => void;
   setPubStatusId: (pubStatusId: string | null | undefined) => void;
   cycleTheme: (id: string) => void;
@@ -58,6 +61,7 @@ function stateOf(included: string[], excluded: string[], id: string): FilterStat
  */
 export const useUiStore = create<UiState>((set, get) => ({
   query: '',
+  searchField: 'all',
   typeId: undefined,
   pubStatusId: undefined,
   themeIds: [],
@@ -71,6 +75,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   sort: 'lastRead',
 
   setQuery: (query) => set({ query }),
+  setSearchField: (searchField) => set({ searchField }),
   setTypeId: (typeId) => set({ typeId }),
   setPubStatusId: (pubStatusId) => set({ pubStatusId }),
 

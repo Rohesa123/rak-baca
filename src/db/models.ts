@@ -138,9 +138,20 @@ export type WorkSort =
   | 'rating'
   | 'progress';
 
+/**
+ * Medan yang disapu oleh `query`.
+ *
+ * Pencarian menyeluruh berguna sebagai jalur utama, tetapi menghalangi
+ * pencarian yang terarah: mencari penulis "Aoyama" ikut memunculkan karya yang
+ * kebetulan judulnya memuat kata itu. Pemisahan ini yang menyelesaikannya.
+ */
+export type SearchField = 'all' | 'title' | 'author';
+
 export interface WorkFilters {
-  /** Dicocokkan ke judul, judul alternatif, penulis, sinopsis, dan catatan. */
+  /** Cakupannya ditentukan `searchField`. */
   query?: string;
+  /** Bawaannya `all`, supaya perilaku lama tetap jadi jalur utama. */
+  searchField?: SearchField;
   typeId?: string | null;
   /** Karya harus punya **semua** tema ini. */
   themeIds?: string[];

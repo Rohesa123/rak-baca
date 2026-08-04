@@ -31,6 +31,7 @@ export const id = {
   'action.use': 'Pakai',
   'action.skip': 'Lewati',
   'action.restore': 'Kembalikan',
+  'action.discard': 'Buang',
 
   'common.loading': 'Memuat…',
   'common.processing': 'Memproses…',
@@ -48,6 +49,14 @@ export const id = {
   'works.empty': 'Rak masih kosong',
   'works.count': '{count} karya tercatat',
   'works.searchPlaceholder': 'Cari judul, penulis, sinopsis, catatan',
+  'works.searchPlaceholder.title': 'Cari judul',
+  'works.searchPlaceholder.author': 'Cari nama penulis',
+  // Muncul hanya saat ada yang diketik — kontrol yang tidak berarti apa-apa
+  // pada kotak kosong hanya membebani layar.
+  'works.searchIn': 'Cari di:',
+  'works.searchIn.all': 'Semua',
+  'works.searchIn.title': 'Judul',
+  'works.searchIn.author': 'Penulis',
   'works.searchLabel': 'Cari karya',
   'works.favoritesFilter': '★ Favorit',
   'works.filter': 'Filter',
@@ -144,6 +153,10 @@ export const id = {
   'settings.backup.how.share': 'bagikan',
   'settings.backup.importResult':
     '{added} karya ditambahkan, {skipped} dilewati karena sudah ada, {taxonomies} nilai katalog baru, {images} gambar.',
+  // Dilaporkan terpisah supaya "dilewati" tidak terbaca seolah tidak terjadi
+  // apa-apa, padahal gambar karya lama baru saja dilengkapi.
+  'settings.backup.importBackfill':
+    'Termasuk {count} gambar yang melengkapi karya yang sudah ada.',
   'settings.backup.importFailed': 'Gagal membaca cadangan.',
   'settings.backup.note':
     'Berkas zip berisi data.json dan folder gambar, bisa dibuka di komputer tanpa aplikasi ini. Impor selalu menggabung — karya yang sudah ada dilewati, tidak pernah ditimpa.',
@@ -165,6 +178,13 @@ export const id = {
   'form.titleOriginal': 'Judul asli',
   'form.titlePlaceholder': 'Judul karya',
   'form.titleRequired': 'Judul wajib diisi',
+  // Ditawarkan, tidak pernah dipulihkan diam-diam — isian yang muncul kembali
+  // sendiri lebih membingungkan daripada isian yang hilang.
+  'form.draftFound': 'Ada isian yang belum selesai. Lanjutkan?',
+  'form.draftUntitled': '(judul belum diisi)',
+  // Sengaja tidak menghalangi penyimpanan — judul yang sama sering kali sah,
+  // misalnya versi manga dan versi novel dari karya yang sama.
+  'form.similarTitle': 'Karya dengan judul ini sudah ada. Tetap bisa disimpan:',
   'form.altTitle': 'Judul alternatif',
   'form.altTitlePlaceholder': 'Kosongkan untuk mengikuti judul asli',
   'form.author': 'Penulis',
@@ -234,6 +254,10 @@ export const id = {
   // pemilih taksonomi
   'picker.newValue': '{kind} baru, lalu tekan Enter',
   'picker.addValue': 'Tambah {kind}',
+  // Satu kotak, dua fungsi: menyaring yang sudah ada sekaligus membuat yang baru.
+  'picker.searchOrAdd': 'Cari atau tambah {kind}',
+  'picker.moreHidden': '{count} lainnya disembunyikan — ketik untuk mencari',
+  'picker.noMatch': 'Tidak ada yang cocok dengan “{query}”. Tekan + untuk menambahkannya.',
 
   // sampul
   'cover.none': 'Belum ada',
@@ -249,6 +273,10 @@ export const id = {
   'gallery.titleWithCount': 'Galeri ({count})',
   'gallery.empty': 'Belum ada gambar. Bisa diisi sampul tiap volume atau ilustrasi lain.',
   'gallery.addFailed': 'Gagal memuat sebagian gambar. Coba pilih berkas lain.',
+  'gallery.permissionDenied':
+    'Rak Baca butuh izin galeri untuk memilih gambar. Coba lagi, lalu pilih Izinkan.',
+  'gallery.permissionBlocked':
+    'Izin galeri diblokir. Buka Pengaturan aplikasi di HP, aktifkan izin Foto atau Media, lalu coba lagi.',
   'gallery.moveLeft': 'Geser ke kiri',
   'gallery.moveRight': 'Geser ke kanan',
   'gallery.openImage': 'Buka gambar',
@@ -299,6 +327,7 @@ export const en: Record<MessageKey, string> = {
   'action.use': 'Use',
   'action.skip': 'Skip',
   'action.restore': 'Restore',
+  'action.discard': 'Discard',
 
   'common.loading': 'Loading…',
   'common.processing': 'Working…',
@@ -312,6 +341,12 @@ export const en: Record<MessageKey, string> = {
   'works.empty': 'Your shelf is empty',
   'works.count': '{count} {count|title|titles} tracked',
   'works.searchPlaceholder': 'Search title, author, synopsis, notes',
+  'works.searchPlaceholder.title': 'Search titles',
+  'works.searchPlaceholder.author': 'Search author names',
+  'works.searchIn': 'Search in:',
+  'works.searchIn.all': 'Everything',
+  'works.searchIn.title': 'Title',
+  'works.searchIn.author': 'Author',
   'works.searchLabel': 'Search titles',
   'works.favoritesFilter': '★ Favorites',
   'works.filter': 'Filter',
@@ -400,6 +435,8 @@ export const en: Record<MessageKey, string> = {
   'settings.backup.how.share': 'share',
   'settings.backup.importResult':
     '{added} {added|title|titles} added, {skipped} skipped as already present, {taxonomies} new catalog {taxonomies|entry|entries}, {images} {images|image|images}.',
+  'settings.backup.importBackfill':
+    'That includes {count} {count|image|images} filled in on titles you already had.',
   'settings.backup.importFailed': 'Could not read that backup.',
   'settings.backup.note':
     'The zip holds data.json and an images folder, readable on a computer without this app. Import always merges — titles that already exist are skipped, never overwritten.',
@@ -420,6 +457,9 @@ export const en: Record<MessageKey, string> = {
   'form.titleOriginal': 'Original title',
   'form.titlePlaceholder': 'Title of the work',
   'form.titleRequired': 'Title is required',
+  'form.draftFound': 'You have an unfinished entry. Continue it?',
+  'form.draftUntitled': '(no title yet)',
+  'form.similarTitle': 'A title like this already exists. You can still save:',
   'form.altTitle': 'Alternative title',
   'form.altTitlePlaceholder': 'Leave empty to follow the original title',
   'form.author': 'Author',
@@ -486,6 +526,9 @@ export const en: Record<MessageKey, string> = {
 
   'picker.newValue': 'New {kind}, then press Enter',
   'picker.addValue': 'Add {kind}',
+  'picker.searchOrAdd': 'Search or add {kind}',
+  'picker.moreHidden': '{count} more hidden — type to search',
+  'picker.noMatch': 'Nothing matches “{query}”. Press + to add it.',
 
   'cover.none': 'None yet',
   'cover.pick': 'Pick from gallery',
@@ -499,6 +542,10 @@ export const en: Record<MessageKey, string> = {
   'gallery.titleWithCount': 'Gallery ({count})',
   'gallery.empty': 'No images yet. Add per-volume covers or other illustrations.',
   'gallery.addFailed': 'Some images could not be loaded. Try different files.',
+  'gallery.permissionDenied':
+    'Rak Baca needs gallery access to pick images. Try again, then choose Allow.',
+  'gallery.permissionBlocked':
+    'Gallery access is blocked. Open the app settings on your phone, turn on Photos or Media, then try again.',
   'gallery.moveLeft': 'Move left',
   'gallery.moveRight': 'Move right',
   'gallery.openImage': 'Open image',

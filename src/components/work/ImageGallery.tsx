@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { imagesRepo } from '../../db/images.repo';
 import type { WorkImage } from '../../db/models';
 import { chooseAndProcessImages } from '../../lib/image';
+import { isGalleryPermissionError } from '../../lib/errors';
 import { useObjectUrl } from '../../hooks/useObjectUrl';
 import { useImageQualityStore } from '../../stores/imageQuality.store';
 import { useT } from '../../i18n/useT';
@@ -81,8 +82,14 @@ export function ImageGallery({ workId, primaryImageId }: ImageGalleryProps) {
           mimeType: image.mimeType,
         });
       }
-    } catch {
-      setError(t('gallery.addFailed'));
+    } catch (caught) {
+      // Izin ditolak bukan kegagalan teknis, dan menyebutnya "gagal menambah
+      // gambar" menyembunyikan satu-satunya hal yang bisa pengguna lakukan.
+      if (isGalleryPermissionError(caught)) {
+        setError(t(caught.permanent ? 'gallery.permissionBlocked' : 'gallery.permissionDenied'));
+      } else {
+        setError(t('gallery.addFailed'));
+      }
     } finally {
       setBusy(false);
     }

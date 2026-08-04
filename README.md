@@ -17,12 +17,15 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - Progress is hidden entirely for formats where it makes no sense — a short story or an article has no chapter to remember
 - Reading status is derived from progress rather than set by hand, so it can never contradict the numbers
 - Mark favourites, give a personal rating, and record when you finished
+- A half-finished entry is kept as a draft, so switching tabs mid-typing does not throw the work away
+- Typing a title that already exists raises a warning, never a block — the same story can legitimately exist as both a manga and a novel, and the warning names the type of what it found
 
 **Organising**
 
 - Four independent axes — type, genre, theme, and publication status — each fully editable, with 55 sensible defaults seeded on first run
-- Search across titles and authors
+- Search everything at once, or narrow it to just titles or just authors
 - Filter by any combination of axes, **including exclusion**: "mystery, but not romance" is a single query
+- Genre and theme pickers filter as you type, so the lists stay usable well past a hundred entries
 - Sort several ways, and select multiple works to delete at once
 
 **Images**
@@ -35,6 +38,7 @@ Most reading trackers are built around books you own or intend to buy. This one 
 **Everything else**
 
 - Export the whole collection to a ZIP and import it back — merge-only and idempotent, so importing the same file twice changes nothing
+- Import never overwrites, but it does fill gaps: a work you already have gains any images the archive carries and it does not
 - Indonesian and English throughout
 - Light, dark, or follow-system theme, plus a custom accent colour whose text contrast is computed rather than guessed
 - Android hardware back button, splash screen, themed status bar, and haptics
@@ -134,6 +138,8 @@ Ordinary pushes build nothing. What happens depends entirely on the trigger:
 | Push a `v*` tag | **Signed release APK** | Attached to the GitHub release, kept indefinitely |
 | **Run workflow** in the Actions tab | Debug APK | Workflow artifact, expires in 30 days |
 
+A tag containing a hyphen — `v1.0.1-beta`, `v2.0.0-rc1` — is published as a **pre-release**, so it never displaces the current stable build as "Latest". Tags are not tied to a branch, so a release can be cut from any branch.
+
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
 ```
@@ -161,6 +167,8 @@ Two consequences to be aware of:
 | `minSdkVersion` | 26 (Android 8.0), so adaptive launcher icons apply on every supported device |
 | `compileSdk` / `targetSdk` | 36 |
 | Permissions | `READ_MEDIA_IMAGES`, plus `READ_EXTERNAL_STORAGE` capped at API 32. `CAMERA` is deliberately **not** requested — the app only ever picks from the gallery |
+
+Gallery access is requested at the moment it is needed rather than at launch, and the three outcomes are handled separately: not yet asked, declined once, and declined permanently. The last one matters most — Android stops showing its dialog after a second refusal, so offering "try again" there would leave the button looking broken. That case points the user at the system settings instead. Android 13 and newer route through the system photo picker, which needs no permission at all.
 | Binary assets | None. The launcher icon and splash screen are vector drawables, so there is no per-density PNG to keep in sync |
 
 `minifyEnabled` is deliberately off for release builds. R8 strips classes reached only by reflection, which is precisely how Capacitor's JavaScript bridge works; enabling it without a tested set of keep rules risks plugins failing silently in the release APK while debug builds look healthy.
@@ -169,9 +177,11 @@ The `android/` directory is committed on purpose. It holds hand-edited files tha
 
 ## Status
 
-Feature-complete for the first release. The data layer, every screen, images, export and import, both languages, and the native polish are done and verified in the browser.
+Feature-complete. The data layer, every screen, images, export and import, both languages, and the native polish are done and verified in the browser.
 
-What has **not** been confirmed is behaviour on real hardware. Gallery permission prompts, the native picker, EXIF orientation on real photos, the physical back button, and persistence after a force-stop can only be checked on a device. Treat the first install as a test.
+What has **not** been confirmed is behaviour on real hardware. The native picker, EXIF orientation on real photos, the physical back button, and persistence after a force-stop can only be checked on a device.
+
+The gallery permission flow deserves a specific mention: the first release never requested the permission at all, which made image picking fail outright on Android 10. That is fixed, but a browser has no concept of these permissions, so the fix can only be proven on a device running Android 12 or older. If you are testing it, revoke the permission in the system settings first — otherwise the dialog will not appear and there is nothing to observe.
 
 Not implemented: manual drag-and-drop ordering, list virtualisation, collection statistics, sharing a list as text, and an AAB bundle for the Play Store.
 

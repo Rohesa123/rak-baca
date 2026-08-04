@@ -15,6 +15,9 @@
   --color-on-brand: #ffffff;
   --color-danger: #dc2626;
   --color-on-danger: #ffffff;
+  /* Peringatan yang tidak menghalangi apa pun — sengaja dibedakan dari danger,
+     yang dipakai untuk tindakan merusak seperti hapus dan pengecualian filter. */
+  --color-warning: #b45309;
 }
 
 /**
@@ -39,6 +42,7 @@
     --color-on-brand: #1e1b2e;
     --color-danger: #f87171;
     --color-on-danger: #2a1010;
+    --color-warning: #fbbf24;
   }
 }
 
@@ -53,6 +57,7 @@
   --color-on-brand: #1e1b2e;
   --color-danger: #f87171;
   --color-on-danger: #2a1010;
+  --color-warning: #fbbf24;
 }
 
 :root {

@@ -8,6 +8,9 @@ import type { WorkSort } from '../../db/models';
 import {
   READING_STATUSES,
   READING_STATUS_KEY,
+  SEARCH_FIELDS,
+  SEARCH_FIELD_LABEL,
+  SEARCH_FIELD_PLACEHOLDER,
   SORTS,
   SORT_KEY,
   TAXONOMY_KIND_KEY,
@@ -26,6 +29,7 @@ import { ThemeToggle } from '../../components/ui/ThemeToggle';
 
 export function WorksPage() {
   const query = useUiStore((s) => s.query);
+  const searchField = useUiStore((s) => s.searchField);
   const typeId = useUiStore((s) => s.typeId);
   const pubStatusId = useUiStore((s) => s.pubStatusId);
   const themeIds = useUiStore((s) => s.themeIds);
@@ -37,6 +41,7 @@ export function WorksPage() {
   const sort = useUiStore((s) => s.sort);
 
   const setQuery = useUiStore((s) => s.setQuery);
+  const setSearchField = useUiStore((s) => s.setSearchField);
   const setTypeId = useUiStore((s) => s.setTypeId);
   const setPubStatusId = useUiStore((s) => s.setPubStatusId);
   const cycleTheme = useUiStore((s) => s.cycleTheme);
@@ -108,6 +113,7 @@ export function WorksPage() {
     () =>
       worksRepo.list({
         query,
+        searchField,
         typeId,
         pubStatusId,
         themeIds,
@@ -120,6 +126,7 @@ export function WorksPage() {
       }),
     [
       query,
+      searchField,
       typeId,
       pubStatusId,
       themeIds,
@@ -208,10 +215,28 @@ export function WorksPage() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('works.searchPlaceholder')}
+          placeholder={t(SEARCH_FIELD_PLACEHOLDER[searchField])}
           aria-label={t('works.searchLabel')}
           className="h-11 w-full rounded-xl border border-border bg-elevated px-3 text-base text-ink outline-none placeholder:text-muted focus:border-brand"
         />
+
+        {/* Hanya muncul saat ada yang diketik. Menampilkannya terus-menerus
+            membebani layar dengan kontrol yang tidak berarti apa-apa selama
+            kotak pencariannya masih kosong. */}
+        {query.trim().length > 0 && (
+          <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1">
+            <span className="shrink-0 text-xs text-muted">{t('works.searchIn')}</span>
+            {SEARCH_FIELDS.map((field) => (
+              <Chip
+                key={field}
+                active={searchField === field}
+                onClick={() => setSearchField(field)}
+              >
+                {t(SEARCH_FIELD_LABEL[field])}
+              </Chip>
+            ))}
+          </div>
+        )}
 
         {/* Status baca paling sering dipakai, jadi dibiarkan terlihat. */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

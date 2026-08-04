@@ -163,14 +163,20 @@ export function SettingsPage() {
       const { importBackup } = await loadBackup();
       const summary = await importBackup(file);
 
-      setBackupMessage(
+      const lines = [
         t('settings.backup.importResult', {
           added: summary.worksAdded,
           skipped: summary.worksSkipped,
           taxonomies: summary.taxonomiesAdded,
           images: summary.imagesAdded,
         }),
-      );
+      ];
+
+      if (summary.imagesBackfilled > 0) {
+        lines.push(t('settings.backup.importBackfill', { count: summary.imagesBackfilled }));
+      }
+
+      setBackupMessage(lines.join(' '));
     } catch (error) {
       // Dikenali lewat `name`, bukan `instanceof`: kelasnya berada di modul
       // yang dimuat dinamis.

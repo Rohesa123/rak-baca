@@ -146,6 +146,7 @@ export function WorkFormPage() {
 
       <WorkForm
         initialValues={initialValues}
+        workId={existing?.id}
         existingCoverThumb={coverImage?.thumbBlob ?? null}
         submitLabel={existing ? t('action.save') : t('action.add')}
         onSubmit={handleSubmit}

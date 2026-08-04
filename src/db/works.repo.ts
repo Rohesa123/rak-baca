@@ -1,6 +1,7 @@
 import { db } from './database';
 import type {
   ReadingStatus,
+  SearchField,
   Taxonomy,
   Work,
   WorkFilters,
@@ -71,16 +72,16 @@ function matchesFilters(
 
   const query = filters.query?.trim().toLowerCase();
   if (query) {
-    const haystack = [
-      work.title,
-      work.altTitle,
-      work.author,
-      work.synopsis ?? '',
-      work.notes ?? '',
-    ]
-      .join(' ')
-      .toLowerCase();
+    // Judul alternatif ikut ke dalam cakupan "judul", bukan berdiri sendiri —
+    // keduanya menamai karya yang sama, dan pengguna yang mencari judul tidak
+    // peduli nama mana yang tercatat di medan mana.
+    const fields: Record<SearchField, string[]> = {
+      all: [work.title, work.altTitle, work.author, work.synopsis ?? '', work.notes ?? ''],
+      title: [work.title, work.altTitle],
+      author: [work.author],
+    };
 
+    const haystack = fields[filters.searchField ?? 'all'].join(' ').toLowerCase();
     if (!haystack.includes(query)) return false;
   }
 
@@ -140,6 +141,36 @@ async function list(filters: WorkFilters = {}): Promise<Work[]> {
   const filtered = rows.filter((work) => matchesFilters(work, filters, typeById));
 
   return sortWorks(filtered, filters.sort ?? 'lastRead');
+}
+
+/**
+ * Karya lain yang judulnya sama persis, untuk memperingatkan saat mencatat.
+ *
+ * **Peringatan, bukan larangan.** Judul yang sama sering kali sah: satu karya
+ * bisa punya versi manga dan versi novel, dan keduanya berhak dicatat terpisah.
+ * Karena itu fungsi ini hanya melapor — tidak ada yang diblokir, tidak ada yang
+ * digabung otomatis.
+ *
+ * Pencocokannya sama persis setelah dinormalkan, bukan "mengandung". Pencocokan
+ * parsial akan memperingatkan setiap kali ada kata yang kebetulan sama, dan
+ * peringatan yang terlalu sering muncul berhenti dibaca.
+ *
+ * `altTitle` ikut diperiksa di kedua sisi, karena satu karya kerap dikenal
+ * dengan lebih dari satu nama dan orang tidak selalu mengetik nama yang sama.
+ */
+async function findSimilarTitles(title: string, excludeId?: string): Promise<Work[]> {
+  const needle = title.trim().toLowerCase();
+  if (!needle) return [];
+
+  const rows = await db.works.toArray();
+
+  return rows.filter((work) => {
+    if (work.id === excludeId) return false;
+    return (
+      work.title.trim().toLowerCase() === needle ||
+      work.altTitle.trim().toLowerCase() === needle
+    );
+  });
 }
 
 async function create(input: WorkInput): Promise<Work> {
@@ -292,6 +323,7 @@ async function setProgress(id: string, current: number): Promise<void> {
 
 export const worksRepo = {
   list,
+  findSimilarTitles,
   create,
   update,
   remove,

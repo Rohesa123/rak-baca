@@ -1,4 +1,6 @@
 import { Camera, MediaTypeSelection } from '@capacitor/camera';
+import { GalleryPermissionError } from './errors';
+import { isNative } from './platform';
 
 export type ImagePurpose = 'cover' | 'art';
 
@@ -98,8 +100,44 @@ async function fetchAndRevoke(webPath: string): Promise<Blob> {
  * Mengembalikan array kosong kalau pengguna membatalkan — pembatalan bukan
  * kegagalan, jadi tidak dilempar sebagai error.
  */
+/**
+ * Memastikan izin galeri sudah dipegang sebelum pemilih dibuka.
+ *
+ * Sebelumnya langkah ini tidak ada sama sekali. Manifest memang sudah
+ * mendeklarasikan `READ_MEDIA_IMAGES` dan `READ_EXTERNAL_STORAGE`, tetapi
+ * mendeklarasikan bukan meminta — sejak Android 6 izin berbahaya wajib diminta
+ * saat berjalan. Akibatnya di Android 10 menekan tombol tambah gambar membuat
+ * aplikasi langsung keluar.
+ *
+ * Bug ini mustahil tertangkap sebelum ada perangkat sungguhan: peramban tidak
+ * mengenal izin ini, dan Android 13 ke atas memakai Photo Picker sistem yang
+ * tidak memerlukan izin apa pun. Yang terkena hanya Android 12 ke bawah.
+ *
+ * Diminta **saat dibutuhkan**, bukan saat aplikasi dibuka. Meminta di layar
+ * pembuka menaikkan angka penolakan, karena pengguna belum punya konteks untuk
+ * memahami kenapa diminta.
+ */
+async function ensureGalleryPermission(): Promise<void> {
+  // Di web tidak ada konsep izin ini; berkas dipilih lewat file input biasa.
+  if (!isNative()) return;
+
+  const status = await Camera.checkPermissions();
+  // `limited` berarti pengguna memberi akses sebagian — cukup untuk memilih.
+  if (status.photos === 'granted' || status.photos === 'limited') return;
+
+  const asked = await Camera.requestPermissions({ permissions: ['photos'] });
+  if (asked.photos === 'granted' || asked.photos === 'limited') return;
+
+  // `denied` berarti dialog sistem tidak akan muncul lagi. Keadaan lain —
+  // `prompt` atau `prompt-with-rationale` — berarti dialognya ditutup tanpa
+  // dijawab, dan menekan tombolnya lagi masih akan memunculkannya.
+  throw new GalleryPermissionError(asked.photos === 'denied');
+}
+
 export async function chooseImagesFromGallery(limit = 0): Promise<Blob[]> {
   let webPaths: string[];
+
+  await ensureGalleryPermission();
 
   try {
     const picked = await Camera.chooseFromGallery({

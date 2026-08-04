@@ -2,6 +2,7 @@ import type {
   AgeRating,
   ProgressUnit,
   ReadingStatus,
+  SearchField,
   TaxonomyKind,
   WorkSort,
 } from '../db/models';
@@ -71,6 +72,25 @@ export const SORTS: readonly WorkSort[] = [
   'rating',
   'progress',
 ];
+
+export const SEARCH_FIELDS: readonly SearchField[] = ['all', 'title', 'author'];
+
+export const SEARCH_FIELD_LABEL: Record<SearchField, MessageKey> = {
+  all: 'works.searchIn.all',
+  title: 'works.searchIn.title',
+  author: 'works.searchIn.author',
+};
+
+/**
+ * Placeholder ikut berganti mengikuti cakupan yang dipilih. Tanpa itu kotaknya
+ * tetap menjanjikan "judul, penulis, sinopsis, catatan" padahal hanya penulis
+ * yang benar-benar disapu — petunjuk yang keliru lebih buruk daripada tidak ada.
+ */
+export const SEARCH_FIELD_PLACEHOLDER: Record<SearchField, MessageKey> = {
+  all: 'works.searchPlaceholder',
+  title: 'works.searchPlaceholder.title',
+  author: 'works.searchPlaceholder.author',
+};
 
 export const TAXONOMY_KIND_KEY: Record<TaxonomyKind, MessageKey> = {
   type: 'taxonomy.type',

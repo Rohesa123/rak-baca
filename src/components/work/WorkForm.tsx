@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { Link } from 'react-router';
+import { draftHasContent, draftStore } from '../../lib/draft';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { taxonomiesRepo } from '../../db/taxonomies.repo';
+import { worksRepo } from '../../db/works.repo';
 import { AGE_RATINGS } from '../../db/models';
-import type { AgeRating, ProgressUnit } from '../../db/models';
+import type { AgeRating, ProgressUnit, Work } from '../../db/models';
 import { AGE_RATING_KEY, PROGRESS_UNITS, PROGRESS_UNIT_KEY } from '../../lib/labels';
 import { useT } from '../../i18n/useT';
 import { Button } from '../ui/Button';
@@ -68,6 +71,8 @@ function Section({ title, children }: SectionProps) {
 
 interface WorkFormProps {
   initialValues: WorkFormValues;
+  /** Diisi saat menyunting, supaya karya tidak memperingatkan tentang dirinya sendiri. */
+  workId?: string;
   existingCoverThumb?: Blob | null;
   submitLabel: string;
   onSubmit: (values: WorkFormValues, cover: CoverDraft) => Promise<void>;
@@ -76,6 +81,7 @@ interface WorkFormProps {
 
 export function WorkForm({
   initialValues,
+  workId,
   existingCoverThumb,
   submitLabel,
   onSubmit,
@@ -89,6 +95,60 @@ export function WorkForm({
   const [cover, setCover] = useState<CoverDraft>({ kind: 'unchanged' });
   const [titleError, setTitleError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [similar, setSimilar] = useState<Work[]>([]);
+
+  // Draf hanya berlaku untuk karya baru. Pada form sunting, data aslinya masih
+  // utuh di database — yang hilang saat berpindah menu hanyalah perubahan yang
+  // belum disimpan, dan memulihkannya diam-diam justru berisiko menimpa nilai
+  // yang sudah benar.
+  const isNew = !workId;
+  const [pendingDraft, setPendingDraft] = useState<WorkFormValues | null>(null);
+  // Form sunting tidak pernah memeriksa draf, jadi keadaannya sudah selesai
+  // sejak awal. Diturunkan dari nilai awal ketimbang di-set di dalam effect —
+  // menyetel state secara sinkron di dalam effect memicu render berlapis.
+  const [draftChecked, setDraftChecked] = useState(!isNew);
+
+  useEffect(() => {
+    if (!isNew) return;
+
+    let cancelled = false;
+    void draftStore.load().then((saved) => {
+      if (cancelled) return;
+      // Ditawarkan, tidak pernah dipulihkan diam-diam. Pengguna yang sengaja
+      // meninggalkan isian akan bingung melihatnya muncul kembali sendiri.
+      if (saved && draftHasContent(saved)) setPendingDraft(saved);
+      setDraftChecked(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isNew]);
+
+  useEffect(() => {
+    // Menunggu pertanyaan draf selesai dijawab. Tanpa penjagaan ini, form yang
+    // masih kosong akan menimpa draf yang justru sedang ditawarkan.
+    if (!isNew || !draftChecked || pendingDraft) return;
+    if (!draftHasContent(values)) return;
+
+    // Ditunda supaya tidak menulis ke penyimpanan pada setiap ketikan.
+    const timer = setTimeout(() => void draftStore.save(values), 800);
+    return () => clearTimeout(timer);
+  }, [values, isNew, draftChecked, pendingDraft]);
+
+  /**
+   * Dicek saat kolom judul kehilangan fokus, bukan pada setiap ketikan.
+   * Mencari di tiap ketikan berarti kueri berulang dan peringatan yang
+   * berkedip-kedip saat judul masih setengah diketik.
+   */
+  async function checkSimilarTitles() {
+    const title = values.title.trim();
+    if (!title) {
+      setSimilar([]);
+      return;
+    }
+    setSimilar(await worksRepo.findSimilarTitles(title, workId));
+  }
 
   function patch(changes: Partial<WorkFormValues>) {
     setValues((current) => ({ ...current, ...changes }));
@@ -119,6 +179,10 @@ export function WorkForm({
     setSaving(true);
     try {
       await onSubmit(values, cover);
+      // Dibuang hanya setelah penyimpanan benar-benar berhasil. Membuangnya
+      // lebih awal berarti kegagalan simpan meninggalkan pengguna tanpa isian
+      // maupun draf.
+      if (isNew) await draftStore.clear();
     } finally {
       setSaving(false);
     }
@@ -126,6 +190,36 @@ export function WorkForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-5">
+      {pendingDraft && (
+        <div className="rounded-xl border border-brand bg-elevated p-3">
+          <p className="text-sm text-ink">{t('form.draftFound')}</p>
+          <p className="mt-1 text-xs text-muted">
+            {pendingDraft.title.trim() || t('form.draftUntitled')}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setValues(pendingDraft);
+                setPendingDraft(null);
+              }}
+            >
+              {t('action.restore')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void draftStore.clear();
+                setPendingDraft(null);
+              }}
+            >
+              {t('action.discard')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <TextField
         id="judul"
         label={t('form.titleOriginal')}
@@ -134,10 +228,45 @@ export function WorkForm({
         onChange={(event) => {
           patch({ title: event.target.value });
           setTitleError(null);
+          // Peringatan lama dibuang begitu judulnya diubah; membiarkannya
+          // membuat pesan itu merujuk judul yang sudah tidak diketik lagi.
+          if (similar.length) setSimilar([]);
         }}
+        onBlur={() => void checkSimilarTitles()}
         error={titleError}
         autoFocus
       />
+
+      {/* Peringatan, bukan larangan: satu karya bisa punya versi manga dan
+          versi novel, dan keduanya berhak dicatat terpisah. Tidak ada yang
+          diblokir — tombol simpan tetap bekerja seperti biasa. */}
+      {similar.length > 0 && (
+        <div className="-mt-2 rounded-xl border border-warning bg-elevated p-3">
+          <p className="text-sm text-ink">{t('form.similarTitle')}</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {similar.map((work) => {
+              const type = types?.find((item) => item.id === work.typeId);
+              return (
+                <li key={work.id} className="text-sm">
+                  <Link
+                    to={`/karya/${work.id}`}
+                    className="text-brand underline underline-offset-2"
+                  >
+                    {work.title}
+                  </Link>
+                  {/* Tipe disebut karena persis itu yang membedakan versi
+                      manga dari versi novel — informasi yang dibutuhkan
+                      untuk memutuskan lanjut atau tidak. */}
+                  <span className="text-muted">
+                    {' · '}
+                    {type ? type.name : t('works.filterNoType')}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <TextField
         id="judul-alt"

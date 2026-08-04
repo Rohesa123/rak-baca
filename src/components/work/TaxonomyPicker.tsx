@@ -46,13 +46,37 @@ export function TaxonomyPicker({ kind, value, onChange }: TaxonomyPickerProps) {
 
   const label = t(TAXONOMY_KIND_KEY[kind]);
 
+  // Kotak yang sama menyaring dan membuat. Nilai bawaan sudah 20 per sumbu dan
+  // pengguna bisa terus menambah; pada angka ratusan, deretan chip mustahil
+  // dipindai mata. Menggabungkannya ke satu kotak menghindari dua medan teks
+  // berdampingan yang fungsinya nyaris sama — ketik untuk mempersempit, tekan
+  // tambah kalau yang dicari memang belum ada.
+  const query = draft.trim().toLowerCase();
+  const all = options ?? [];
+
+  // Yang sudah dipilih selalu ikut tampil meski tidak cocok dengan kata kunci.
+  // Kalau ikut tersembunyi, pengguna kehilangan jejak apa saja yang sudah
+  // dipilihnya, dan satu-satunya cara memeriksa adalah mengosongkan pencarian.
+  const selected = all.filter((option) => value.includes(option.id));
+  const rest = all.filter(
+    (option) => !value.includes(option.id) && (!query || option.name.toLowerCase().includes(query)),
+  );
+
+  // Tanpa kata kunci, daftar dipangkas supaya form tidak berubah jadi dinding
+  // chip. Begitu pengguna mengetik, seluruh yang cocok ditampilkan.
+  const LIMIT = 20;
+  const hidden = query ? 0 : Math.max(0, rest.length - LIMIT);
+  const shown = [...selected, ...(hidden ? rest.slice(0, LIMIT) : rest)];
+
+  const exactExists = all.some((option) => option.name.toLowerCase() === query);
+
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-muted">{label}</span>
 
-      {options && options.length > 0 && (
+      {shown.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {options.map((option) => (
+          {shown.map((option) => (
             <Chip
               key={option.id}
               active={value.includes(option.id)}
@@ -64,13 +88,21 @@ export function TaxonomyPicker({ kind, value, onChange }: TaxonomyPickerProps) {
         </div>
       )}
 
+      {hidden > 0 && (
+        <p className="text-xs text-muted">{t('picker.moreHidden', { count: hidden })}</p>
+      )}
+
+      {query && rest.length === 0 && !exactExists && (
+        <p className="text-xs text-muted">{t('picker.noMatch', { query: draft.trim() })}</p>
+      )}
+
       <div className="flex gap-2">
         <input
           type="text"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t('picker.newValue', { kind: label })}
+          placeholder={t('picker.searchOrAdd', { kind: label.toLowerCase() })}
           className="h-11 w-full min-w-0 rounded-xl border border-border bg-elevated px-3 text-base text-ink outline-none placeholder:text-muted focus:border-brand"
         />
         <Button

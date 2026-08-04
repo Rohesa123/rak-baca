@@ -229,9 +229,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp "$APK_FILE" "rak-baca-${GITHUB_REF_NAME}.apk"
+
+          # Tag yang memuat tanda hubung diperlakukan sebagai pra-rilis:
+          # v1.0.1-beta, v2.0.0-rc1, dan sejenisnya. Tanpa ini GitHub menandai
+          # rilis terakhir sebagai "Latest", sehingga sebuah beta akan tampil
+          # sebagai versi resmi terkini dan diunduh orang yang mengira itu
+          # stabil. Aturan yang sama dipakai semver untuk versi pra-rilis.
+          PRERELEASE=""
+          case "$GITHUB_REF_NAME" in
+            *-*) PRERELEASE="--prerelease"
+                 echo "Tag memuat tanda hubung -> ditandai sebagai pra-rilis." ;;
+            *)   echo "Tag rilis stabil." ;;
+          esac
+
           gh release create "$GITHUB_REF_NAME" \
             --title "Rak Baca $GITHUB_REF_NAME" \
             --generate-notes \
+            $PRERELEASE \
             "rak-baca-${GITHUB_REF_NAME}.apk" \
           || gh release upload "$GITHUB_REF_NAME" \
             "rak-baca-${GITHUB_REF_NAME}.apk" --clobber

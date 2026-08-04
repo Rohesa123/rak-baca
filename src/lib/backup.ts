@@ -50,6 +50,30 @@ async function blobToBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
+/**
+ * Penanda waktu untuk nama berkas: `2026-08-04-143512`.
+ *
+ * Beresolusi detik, bukan tanggal saja. Sebelumnya dua ekspor di hari yang sama
+ * menghasilkan nama yang identik, sehingga cadangan kedua menimpa yang pertama —
+ * persis pada saat pengguna merasa sedang mengamankan datanya.
+ *
+ * Detik dipilih ketimbang karakter acak karena sama-sama membuat unik, tetapi
+ * hanya waktu yang **memberi tahu urutannya**. Berhadapan dengan dua nama acak,
+ * mustahil tahu mana cadangan terbaru tanpa membuka keduanya; dengan waktu,
+ * pengelola berkas mengurutkannya sendiri.
+ *
+ * Memakai waktu **lokal**, bukan `toISOString()` yang selalu UTC. Bagi pengguna
+ * di WIB, ekspor pukul 01.00 tanggal 5 akan tertulis tanggal 4 — tanggal yang
+ * tidak pernah dilihatnya di jam mana pun.
+ */
+function localStamp(date = new Date()): string {
+  const p = (value: number, width = 2) => String(value).padStart(width, '0');
+  return (
+    `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}` +
+    `-${p(date.getHours())}${p(date.getMinutes())}${p(date.getSeconds())}`
+  );
+}
+
 // ---------------------------------------------------------------- ekspor
 
 export interface ExportOptions {
@@ -131,12 +155,11 @@ export async function buildExport(options: ExportOptions): Promise<ExportResult>
   files['data.json'] = [strToU8(JSON.stringify(document, null, 2)), { level: 6 }];
 
   const bytes = await zipAsync(files);
-  const stamp = new Date().toISOString().slice(0, 10);
   const suffix = options.includeImages ? '' : '-tanpa-gambar';
 
   return {
     blob: new Blob([bytes as BlobPart], { type: 'application/zip' }),
-    filename: `rak-baca-${stamp}${suffix}.zip`,
+    filename: `rak-baca-${localStamp()}${suffix}.zip`,
     workCount: selected.length,
     imageCount: options.includeImages ? exportedImages.filter((i) => i.file).length : 0,
   };
@@ -190,6 +213,15 @@ export interface ImportSummary {
   worksSkipped: number;
   taxonomiesAdded: number;
   imagesAdded: number;
+  /**
+   * Bagian dari `imagesAdded` yang masuk ke karya yang sudah ada sebelumnya,
+   * bukan ke karya yang baru diimpor.
+   *
+   * Dilaporkan terpisah karena tanpa itu ringkasannya menyesatkan: pengguna
+   * yang membaca "2 karya dilewati" wajar menyimpulkan tidak terjadi apa-apa,
+   * padahal justru gambar mereka baru saja dilengkapi.
+   */
+  imagesBackfilled: number;
 }
 
 export class BackupFormatError extends Error {
@@ -284,11 +316,11 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
 
   const existingWorkIds = new Set(await db.works.toCollection().primaryKeys());
   const worksToAdd: Work[] = [];
-  let worksSkipped = 0;
+  const skippedWorkIds = new Set<string>();
 
   for (const work of document.works) {
     if (existingWorkIds.has(work.id)) {
-      worksSkipped += 1;
+      skippedWorkIds.add(work.id);
       continue;
     }
 
@@ -302,20 +334,76 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
   }
 
   const addedWorkIds = new Set(worksToAdd.map((work) => work.id));
+
+  // Karya yang dilewati tetap diperiksa gambarnya. Sebelumnya karya yang
+  // `id`-nya sudah ada dilewati **seluruhnya**, sehingga mengimpor arsip tanpa
+  // gambar lalu arsip bergambar meninggalkan karya itu selamanya tanpa gambar —
+  // impor melapor "dilewati" dan tampak seolah tidak ada yang bisa dilakukan.
+  //
+  // Yang berubah hanya cakupannya, bukan aturannya: gambar yang `id`-nya sudah
+  // ada tidak pernah disentuh, dan tidak ada medan karya yang ditimpa. Yang
+  // dilakukan hanya menambah yang belum ada dan mengisi yang masih kosong.
+  const existingImageIds = new Set(await db.images.toCollection().primaryKeys());
+
+  const localImages = skippedWorkIds.size
+    ? await db.images.where('workId').anyOf([...skippedWorkIds]).toArray()
+    : [];
+
+  // Gambar susulan ditempatkan di belakang milik yang sudah ada. Memakai
+  // `sortOrder` asli dari arsip akan bertabrakan dengan urutan lokal, dan
+  // pengguna tidak punya cara menebak urutan mana yang menang.
+  const nextSortOrder = new Map<string, number>();
+  for (const image of localImages) {
+    const current = nextSortOrder.get(image.workId) ?? -1;
+    nextSortOrder.set(image.workId, Math.max(current, image.sortOrder));
+  }
+
+  const localSkippedWorks = skippedWorkIds.size
+    ? await db.works.bulkGet([...skippedWorkIds])
+    : [];
+  const needsPrimary = new Map<string, boolean>();
+  for (const work of localSkippedWorks) {
+    if (work) needsPrimary.set(work.id, work.primaryImageId === null);
+  }
+
   const imagesToAdd: WorkImage[] = [];
   const blobsToAdd: Array<{ id: string; blob: Blob }> = [];
+  const primaryToSet = new Map<string, string>();
+  let imagesBackfilled = 0;
 
   for (const image of document.images) {
-    if (!addedWorkIds.has(image.workId) || !image.file) continue;
+    if (!image.file) continue;
+
+    const isNewWork = addedWorkIds.has(image.workId);
+    const isBackfill = !isNewWork && skippedWorkIds.has(image.workId);
+    if (!isNewWork && !isBackfill) continue;
+
+    // Gambar yang sudah ada dibiarkan apa adanya — tidak ditimpa, tidak
+    // digandakan. Sama seperti karya, identitasnya dipegang oleh `id`: nama
+    // berkas bisa berubah dan dua gambar berbeda bisa bernama sama.
+    if (isBackfill && existingImageIds.has(image.id)) continue;
 
     const bytes = archive[image.file];
     if (!bytes) continue;
 
     const blob = new Blob([bytes as BlobPart], { type: image.mimeType });
+    let sortOrder = image.sortOrder;
+
+    if (isBackfill) {
+      sortOrder = (nextSortOrder.get(image.workId) ?? -1) + 1;
+      nextSortOrder.set(image.workId, sortOrder);
+      imagesBackfilled += 1;
+
+      // Mengisi sampul utama yang masih kosong. Ini melengkapi, bukan menimpa:
+      // karya yang sudah punya sampul tidak pernah diganti.
+      if (needsPrimary.get(image.workId) && !primaryToSet.has(image.workId)) {
+        primaryToSet.set(image.workId, image.id);
+      }
+    }
 
     // Thumbnail dibuat ulang di sini, bukan diambil dari zip — ia sepenuhnya
     // turunan, dan memasukkannya ke ekspor hanya menggelembungkan berkas.
-    imagesToAdd.push({ ...image, thumbBlob: await makeThumbnail(blob) });
+    imagesToAdd.push({ ...image, sortOrder, thumbBlob: await makeThumbnail(blob) });
     blobsToAdd.push({ id: image.id, blob });
   }
 
@@ -326,12 +414,17 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
     if (worksToAdd.length) await db.works.bulkAdd(worksToAdd);
     if (imagesToAdd.length) await db.images.bulkPut(imagesToAdd);
     if (blobsToAdd.length) await db.imageBlobs.bulkPut(blobsToAdd);
+
+    for (const [workId, imageId] of primaryToSet) {
+      await db.works.update(workId, { primaryImageId: imageId });
+    }
   });
 
   return {
     worksAdded: worksToAdd.length,
-    worksSkipped,
+    worksSkipped: skippedWorkIds.size,
     taxonomiesAdded: taxonomiesToAdd.length,
     imagesAdded: imagesToAdd.length,
+    imagesBackfilled,
   };
 }
