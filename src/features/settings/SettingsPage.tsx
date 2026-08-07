@@ -6,6 +6,7 @@ import { worksRepo } from '../../db/works.repo';
 import { db } from '../../db/database';
 import { platformName } from '../../lib/platform';
 import { parseHex } from '../../lib/color';
+import { formatBytes } from '../../lib/format';
 import { QUALITY_PRESETS } from '../../lib/image';
 import type { QualityPreset } from '../../lib/image';
 import { useThemeStore } from '../../stores/theme.store';
@@ -13,6 +14,7 @@ import type { ThemeMode } from '../../stores/theme.store';
 import { useImageQualityStore } from '../../stores/imageQuality.store';
 import { ACCENT_PRESETS, DEFAULT_ACCENT, useAccentStore } from '../../stores/accent.store';
 import { useLanguageStore } from '../../stores/language.store';
+import { AMBANG_HARI, useBackupReminderStore } from '../../stores/backupReminder.store';
 import type { Language } from '../../stores/language.store';
 import { useT } from '../../i18n/useT';
 import type { MessageKey } from '../../i18n/messages';
@@ -20,6 +22,8 @@ import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { TextField } from '../../components/ui/TextField';
+import { LockSettings } from './LockSettings';
+import { IntegritySettings } from './IntegritySettings';
 
 /**
  * Modul backup membawa `fflate` dan dua plugin Capacitor, sekitar 9 KB gzip,
@@ -50,12 +54,6 @@ const PLATFORM_KEY: Record<string, MessageKey> = {
   android: 'settings.platform.android',
   ios: 'settings.platform.ios',
 };
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 interface RowProps {
   label: string;
@@ -88,6 +86,11 @@ export function SettingsPage() {
   const setAccent = useAccentStore((state) => state.setAccent);
   const [hexDraft, setHexDraft] = useState('');
   const [hexError, setHexError] = useState<string | null>(null);
+
+  const recordBackup = useBackupReminderStore((state) => state.recordBackup);
+  const remindEnabled = useBackupReminderStore((state) => state.enabled);
+  const setRemindEnabled = useBackupReminderStore((state) => state.setEnabled);
+  const lastBackupAt = useBackupReminderStore((state) => state.lastBackupAt);
 
   const workCount = useLiveQuery(() => worksRepo.count(), []);
   const imageCount = useLiveQuery(() => db.images.count(), []);
@@ -129,6 +132,15 @@ export function SettingsPage() {
       const { buildExport, deliverExport } = await loadBackup();
       const result = await buildExport({ includeImages });
       const how = await deliverExport(result);
+
+      // Hanya ekspor seluruh koleksi yang dihitung sebagai pencadangan.
+      // Ekspor pilihan di halaman Rak sengaja tidak — sebagian koleksi bukan
+      // cadangan, dan menganggapnya begitu memberi rasa aman yang keliru.
+      //
+      // Ekspor tanpa gambar tetap dihitung: seluruh catatan, tautan, dan
+      // klasifikasi ikut terbawa, dan itu bagian yang benar-benar tidak
+      // tergantikan.
+      recordBackup();
 
       setBackupMessage(
         t('settings.backup.result', {
@@ -357,7 +369,42 @@ export function SettingsPage() {
         )}
 
         <p className="text-xs leading-relaxed text-muted">{t('settings.backup.note')}</p>
+
+        {/* Pengingat bisa dimatikan. Pengingat yang tidak bisa dibungkam
+            berubah jadi gangguan, dan pengguna yang terganggu berhenti
+            mempercayainya sama sekali. */}
+        <label className="mt-1 flex items-start gap-3 border-t border-border pt-3">
+          <input
+            type="checkbox"
+            checked={remindEnabled}
+            onChange={(event) => setRemindEnabled(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm text-ink">{t('settings.backup.remind')}</span>
+            <span className="text-xs text-muted">
+              {t('settings.backup.remindNote', { days: AMBANG_HARI })}
+            </span>
+          </span>
+        </label>
+
+        <Row
+          label={t('settings.backup.lastAt')}
+          value={
+            lastBackupAt === null
+              ? t('settings.backup.never')
+              : new Date(lastBackupAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'id-ID', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })
+          }
+        />
       </section>
+
+      <LockSettings />
+
+      <IntegritySettings />
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">{t('settings.storage')}</h2>

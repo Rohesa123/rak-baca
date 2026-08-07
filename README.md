@@ -13,9 +13,11 @@ Most reading trackers are built around books you own or intend to buy. This one 
 **Tracking what you read**
 
 - Record a work with its title, an alternative title for works known under more than one name, author, synopsis, private notes, and a link back to the source
-- Track progress in chapters or pages, with or without a known total, and jump forward one unit at a time
+- Track progress in chapters or pages, with or without a known total
+- Advance one unit at a time, or tap the number to type it directly — twenty chapters in one sitting should not mean twenty taps
 - Progress is hidden entirely for formats where it makes no sense — a short story or an article has no chapter to remember
 - Reading status is derived from progress rather than set by hand, so it can never contradict the numbers
+- The shelf opens with what you were last reading, ahead of whatever sort or filter is active — it answers the question the app exists for
 - Mark favourites, give a personal rating, and record when you finished
 - A half-finished entry is kept as a draft, so switching tabs mid-typing does not throw the work away
 - Typing a title that already exists raises a warning, never a block — the same story can legitimately exist as both a manga and a novel, and the warning names the type of what it found
@@ -26,7 +28,8 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - Search everything at once, or narrow it to just titles or just authors
 - Filter by any combination of axes, **including exclusion**: "mystery, but not romance" is a single query
 - Genre and theme pickers filter as you type, so the lists stay usable well past a hundred entries
-- Sort several ways, and select multiple works to delete at once
+- Sort several ways, and select multiple works to delete, export, or reclassify at once
+- Bulk classification only ever *adds* genres and themes — there is no button that replaces them, because on twenty titles at once that would not be noticed until too late
 
 **Images**
 
@@ -37,8 +40,11 @@ Most reading trackers are built around books you own or intend to buy. This one 
 
 **Everything else**
 
+- A reminder appears on the shelf after a month without a backup — dismissible, and switchable off
 - Export the whole collection to a ZIP and import it back — merge-only and idempotent, so importing the same file twice changes nothing
-- Import never overwrites, but it does fill gaps: a work you already have gains any images the archive carries and it does not
+- Import never overwrites, but it does fill gaps: a work you already have gains any images the archive carries and it is missing
+- A data integrity check in Settings that finds dangling references and orphaned images, reports what it found, and only removes what nothing can reach
+- An optional PIN lock, off by default — a display barrier, not encryption, and the settings screen says so plainly
 - Indonesian and English throughout
 - Light, dark, or follow-system theme, plus a custom accent colour whose text contrast is computed rather than guessed
 - Android hardware back button, splash screen, themed status bar, and haptics
@@ -48,6 +54,8 @@ Most reading trackers are built around books you own or intend to buy. This one 
 The app never makes a network request. That is not a limitation waiting to be lifted — it is the point. There is no account to create, no sync to configure, nothing to keep paying for, and no server that can disappear and take your notes with it.
 
 The trade-off is real and worth stating plainly: **nothing is backed up automatically.** If the app is uninstalled or its storage is cleared, the data is gone. The ZIP export exists for exactly this reason, and it is worth using.
+
+Because relying on memory for something with permanent consequences is a poor design, the shelf shows a quiet line once a month has passed without an export. It is a line, not a dialog — it can be postponed, or switched off entirely in Settings.
 
 ## Tech stack
 

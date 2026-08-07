@@ -308,6 +308,80 @@ async function bumpProgress(id: string, delta = 1): Promise<void> {
     });
 }
 
+export interface BulkClassifyPatch {
+  /** `undefined` berarti jangan diubah. `null` berarti kosongkan. */
+  typeId?: string | null;
+  pubStatusId?: string | null;
+  /** Ditambahkan ke yang sudah ada, tidak pernah menggantikannya. */
+  addGenreIds?: string[];
+  addThemeIds?: string[];
+}
+
+/**
+ * Mengubah klasifikasi banyak karya sekaligus.
+ *
+ * **Genre dan tema hanya bisa ditambahkan, tidak pernah diganti.** Mengganti
+ * akan menghapus klasifikasi yang susah payah dibuat, dan pada dua puluh karya
+ * sekaligus itu tidak akan disadari sampai terlambat. Kalaupun suatu saat
+ * "ganti" dibutuhkan, ia harus jadi tindakan terpisah yang bunyinya berbeda.
+ *
+ * Tipe dan status terbit memang menimpa — keduanya bernilai tunggal, jadi tidak
+ * ada semantik "tambah" yang masuk akal. Karena itu pemanggil wajib
+ * mengonfirmasi lebih dulu dan menyebut berapa karya yang terkena.
+ *
+ * **`progressUnit` sengaja tidak ikut berubah** saat tipe diganti, berbeda dari
+ * form satuan. Di form, pengguna sedang memilih satu karya dan melihat
+ * akibatnya; di sini mengubah satuan dua puluh karya sekaligus akan mengubah
+ * cara progres mereka terbaca — "Ch. 45" jadi "Hal. 45" — tanpa diminta.
+ */
+async function bulkClassify(ids: string[], patch: BulkClassifyPatch): Promise<number> {
+  if (ids.length === 0) return 0;
+
+  const now = Date.now();
+  let changed = 0;
+
+  await db.transaction('rw', db.works, async () => {
+    for (const id of ids) {
+      await db.works
+        .where(':id')
+        .equals(id)
+        .modify((work) => {
+          let touched = false;
+
+          if (patch.typeId !== undefined && work.typeId !== patch.typeId) {
+            work.typeId = patch.typeId;
+            touched = true;
+          }
+
+          if (patch.pubStatusId !== undefined && work.pubStatusId !== patch.pubStatusId) {
+            work.pubStatusId = patch.pubStatusId;
+            touched = true;
+          }
+
+          const gabung = (kini: string[], tambahan?: string[]) => {
+            if (!tambahan?.length) return kini;
+            const baru = tambahan.filter((value) => !kini.includes(value));
+            if (baru.length === 0) return kini;
+            touched = true;
+            return [...kini, ...baru];
+          };
+
+          work.genreIds = gabung(work.genreIds, patch.addGenreIds);
+          work.themeIds = gabung(work.themeIds, patch.addThemeIds);
+
+          // `updatedAt` hanya disentuh kalau ada yang benar-benar berubah;
+          // karya yang sudah bernilai sama tidak perlu dicatat sebagai diubah.
+          if (touched) {
+            work.updatedAt = now;
+            changed += 1;
+          }
+        });
+    }
+  });
+
+  return changed;
+}
+
 async function setProgress(id: string, current: number): Promise<void> {
   const now = Date.now();
 
@@ -324,6 +398,7 @@ async function setProgress(id: string, current: number): Promise<void> {
 export const worksRepo = {
   list,
   findSimilarTitles,
+  bulkClassify,
   create,
   update,
   remove,
@@ -336,6 +411,56 @@ export const worksRepo = {
 
   count(): Promise<number> {
     return db.works.count();
+  },
+
+  /**
+   * Karya yang paling pantas dilanjutkan, terbaru lebih dulu.
+   *
+   * Tujuan aplikasi ini satu kalimat: *apa yang saya baca, sampai mana*.
+   * Jawabannya selama ini tersebar di daftar biasa yang kebetulan terurut
+   * `lastReadAt`, dan hilang begitu pengguna mengganti pengurutan atau
+   * memfilter. Daftar ini menjawabnya tanpa bergantung pada keduanya.
+   *
+   * Tiga hal disingkirkan, semuanya karena "lanjutkan" tidak berarti apa-apa
+   * di sana: karya yang sudah ditandai selesai, karya yang progresnya sudah
+   * menyentuh total, dan tipe yang memang tidak melacak progres seperti cerpen
+   * dan artikel.
+   *
+   * Karya yang belum pernah dibaca ikut tersaring dengan sendirinya:
+   * `lastReadAt`-nya `null`, dan IndexedDB tidak memasukkan nilai null ke
+   * dalam indeks — jadi `orderBy` sudah melewatkannya tanpa perlu diperiksa.
+   */
+  async continueReading(limit = 3): Promise<Work[]> {
+    const types = await db.taxonomies.where('kind').equals('type').toArray();
+    const tanpaProgres = new Set(
+      types.filter((type) => type.tracksProgress === false).map((type) => type.id),
+    );
+
+    // `limit` setelah `filter` menghentikan iterasi lebih awal, jadi koleksi
+    // besar tidak perlu dimuat seluruhnya hanya untuk mengambil tiga teratas.
+    return db.works
+      .orderBy('lastReadAt')
+      .reverse()
+      .filter(
+        (work) =>
+          work.finishedAt === null &&
+          !isProgressAtEnd(work) &&
+          !(work.typeId !== null && tanpaProgres.has(work.typeId)),
+      )
+      .limit(limit)
+      .toArray();
+  },
+
+  /**
+   * `createdAt` karya tertua, atau `null` kalau koleksinya kosong.
+   *
+   * Dipakai pengingat cadangan sebagai patokan saat pengguna belum pernah
+   * mengekspor sama sekali — menjawab "sudah berapa lama data ini ada tanpa
+   * salinan". Memakai indeks `createdAt`, jadi tidak memindai seluruh tabel.
+   */
+  async oldestCreatedAt(): Promise<number | null> {
+    const oldest = await db.works.orderBy('createdAt').first();
+    return oldest?.createdAt ?? null;
   },
 
   /** Favorit disimpan sebagai timestamp; lihat catatan di `models.ts`. */

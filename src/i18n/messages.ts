@@ -32,6 +32,7 @@ export const id = {
   'action.skip': 'Lewati',
   'action.restore': 'Kembalikan',
   'action.discard': 'Buang',
+  'action.later': 'Nanti',
 
   'common.loading': 'Memuat…',
   'common.processing': 'Memproses…',
@@ -58,6 +59,7 @@ export const id = {
   'works.searchIn.title': 'Judul',
   'works.searchIn.author': 'Penulis',
   'works.searchLabel': 'Cari karya',
+  'works.continue': 'Lanjutkan membaca',
   'works.favoritesFilter': '★ Favorit',
   'works.filter': 'Filter',
   'works.filterWithCount': 'Filter ({count})',
@@ -79,10 +81,23 @@ export const id = {
   'works.filterMustHaveAll': '(harus punya semua)',
   'works.filterCycleHint': 'Ketuk sekali untuk menyertakan, sekali lagi untuk mengecualikan.',
 
+  // ubah klasifikasi banyak karya
+  'bulk.action': 'Klasifikasi',
+  'bulk.title': 'Ubah klasifikasi {count} karya',
+  'bulk.description': 'Yang dibiarkan "tidak diubah" tetap seperti semula.',
+  'bulk.keep': 'Tidak diubah',
+  // Kata "tambah" yang membedakannya dari menimpa, jadi ia harus ada di label.
+  'bulk.addGenre': 'Tambahkan genre',
+  'bulk.addTheme': 'Tambahkan tema',
+  'bulk.overwriteWarning':
+    'Tipe dan status terbit akan menimpa nilai lama pada {count} karya. Genre dan tema hanya ditambahkan, tidak pernah menghapus yang sudah ada.',
+  'bulk.result': '{count} karya diperbarui.',
+
   // kartu karya
   'card.open': 'Buka {title}',
   'card.favorite': 'Favorit',
   'card.bumpProgress': 'Tambah progres {title}',
+  'card.editProgress': 'Ubah progres {title}',
 
   // status baca
   'readingStatus.belum': 'Belum mulai',
@@ -158,8 +173,56 @@ export const id = {
   'settings.backup.importBackfill':
     'Termasuk {count} gambar yang melengkapi karya yang sudah ada.',
   'settings.backup.importFailed': 'Gagal membaca cadangan.',
+  'backup.reminder':
+    'Sudah {days} hari tanpa cadangan. Ekspor sekarang selagi ingat.',
+  'settings.backup.remind': 'Ingatkan mencadangkan',
+  'settings.backup.remindNote':
+    'Muncul sebagai baris kecil di halaman Rak setelah lewat {days} hari tanpa ekspor. Bukan dialog, dan bisa ditunda.',
+  'settings.backup.lastAt': 'Terakhir dicadangkan',
+  'settings.backup.never': 'Belum pernah',
   'settings.backup.note':
     'Berkas zip berisi data.json dan folder gambar, bisa dibuka di komputer tanpa aplikasi ini. Impor selalu menggabung — karya yang sudah ada dilewati, tidak pernah ditimpa.',
+  // kunci aplikasi
+  'lock.title': 'Kunci aplikasi',
+  'lock.statusOn': 'Aktif. Diminta saat aplikasi dibuka, dan setelah ditinggalkan lebih dari {seconds} detik.',
+  'lock.statusOff': 'Mati. Siapa pun yang memegang ponsel ini bisa membuka koleksi Anda.',
+  'lock.turnOn': 'Pasang PIN',
+  'lock.turnOff': 'Matikan',
+  'lock.change': 'Ganti PIN',
+  'lock.newPin': 'PIN baru',
+  'lock.repeatPin': 'Ulangi PIN',
+  'lock.currentPin': 'PIN saat ini',
+  'lock.mismatch': 'Kedua PIN tidak sama.',
+  'lock.wrong': 'PIN salah.',
+  'lock.enabled': 'Kunci aktif.',
+  'lock.disabled': 'Kunci dimatikan.',
+  'lock.prompt': 'Masukkan PIN',
+  'lock.open': 'Buka',
+  // Batasnya dinyatakan terang-terangan, bukan disamarkan.
+  'lock.scopeNote':
+    'Kunci ini menghalangi orang yang meminjam ponsel Anda membuka aplikasinya. Isinya tidak dienkripsi — siapa pun yang bisa membongkar penyimpanan perangkat tetap bisa membacanya.',
+  'lock.forgotNote':
+    'Tidak ada pemulihan. PIN yang lupa berarti koleksi tidak bisa dibuka lagi dari aplikasi ini. Ekspor cadangan dulu sebelum memasangnya.',
+  'lock.noRecovery': 'Tidak ada pemulihan PIN. Aplikasi ini tidak punya akun maupun surel.',
+
+  // pemeriksa keutuhan data
+  'integrity.title': 'Periksa keutuhan data',
+  'integrity.note':
+    'Mencari rujukan yang menggantung dan gambar yang tidak lagi punya pemilik. Memeriksa tidak mengubah apa pun — hasilnya ditampilkan dulu sebelum ada yang dihapus.',
+  'integrity.scan': 'Periksa sekarang',
+  'integrity.clean': 'Tidak ditemukan masalah.',
+  'integrity.danglingPrimary': '{count} karya menunjuk sampul yang tidak ada',
+  'integrity.orphanImages': '{count} gambar tanpa karya pemilik',
+  'integrity.orphanBlobs': '{count} berkas gambar tanpa data pendamping',
+  'integrity.danglingTaxonomies': '{count} rujukan katalog yang sudah terhapus',
+  'integrity.reclaimable': 'Sekitar {size} bisa dibebaskan.',
+  'integrity.backupFirst': 'Ekspor cadangan dulu kalau ragu. Perapian tidak bisa dibatalkan.',
+  'integrity.repair': 'Rapikan',
+  'integrity.confirmTitle': 'Rapikan sekarang?',
+  'integrity.confirmBody':
+    'Hanya data yang sudah tidak bisa dijangkau yang dibuang: gambar tanpa pemilik dan penunjuk ke sesuatu yang memang tidak ada. Karya, gambar yang masih terpakai, dan nilai katalog tidak disentuh.',
+  'integrity.repaired': 'Selesai dirapikan. Sekitar {size} dibebaskan.',
+
   'settings.storage': 'Penyimpanan',
   'settings.storage.works': 'Karya',
   'settings.storage.images': 'Gambar',
@@ -328,6 +391,7 @@ export const en: Record<MessageKey, string> = {
   'action.skip': 'Skip',
   'action.restore': 'Restore',
   'action.discard': 'Discard',
+  'action.later': 'Later',
 
   'common.loading': 'Loading…',
   'common.processing': 'Working…',
@@ -348,6 +412,7 @@ export const en: Record<MessageKey, string> = {
   'works.searchIn.title': 'Title',
   'works.searchIn.author': 'Author',
   'works.searchLabel': 'Search titles',
+  'works.continue': 'Continue reading',
   'works.favoritesFilter': '★ Favorites',
   'works.filter': 'Filter',
   'works.filterWithCount': 'Filter ({count})',
@@ -369,9 +434,20 @@ export const en: Record<MessageKey, string> = {
   'works.filterMustHaveAll': '(must have all)',
   'works.filterCycleHint': 'Tap once to include, tap again to exclude.',
 
+  'bulk.action': 'Classify',
+  'bulk.title': 'Classify {count} {count|title|titles}',
+  'bulk.description': 'Anything left as "unchanged" stays exactly as it was.',
+  'bulk.keep': 'Unchanged',
+  'bulk.addGenre': 'Add genres',
+  'bulk.addTheme': 'Add themes',
+  'bulk.overwriteWarning':
+    'Type and publication status will replace the existing values on {count} {count|title|titles}. Genres and themes are only added, never removed.',
+  'bulk.result': '{count} {count|title|titles} updated.',
+
   'card.open': 'Open {title}',
   'card.favorite': 'Favorite',
   'card.bumpProgress': 'Advance progress for {title}',
+  'card.editProgress': 'Edit progress for {title}',
 
   'readingStatus.belum': 'Not started',
   'readingStatus.berjalan': 'Reading',
@@ -438,8 +514,53 @@ export const en: Record<MessageKey, string> = {
   'settings.backup.importBackfill':
     'That includes {count} {count|image|images} filled in on titles you already had.',
   'settings.backup.importFailed': 'Could not read that backup.',
+  'backup.reminder':
+    'It has been {days} days since your last backup. Export now while you think of it.',
+  'settings.backup.remind': 'Remind me to back up',
+  'settings.backup.remindNote':
+    'Appears as a small line on the shelf after {days} days without an export. Not a dialog, and it can be postponed.',
+  'settings.backup.lastAt': 'Last backed up',
+  'settings.backup.never': 'Never',
   'settings.backup.note':
     'The zip holds data.json and an images folder, readable on a computer without this app. Import always merges — titles that already exist are skipped, never overwritten.',
+  'lock.title': 'App lock',
+  'lock.statusOn': 'On. Asked when the app opens, and after more than {seconds} seconds away.',
+  'lock.statusOff': 'Off. Anyone holding this phone can open your collection.',
+  'lock.turnOn': 'Set a PIN',
+  'lock.turnOff': 'Turn off',
+  'lock.change': 'Change PIN',
+  'lock.newPin': 'New PIN',
+  'lock.repeatPin': 'Repeat PIN',
+  'lock.currentPin': 'Current PIN',
+  'lock.mismatch': 'The two PINs do not match.',
+  'lock.wrong': 'Wrong PIN.',
+  'lock.enabled': 'Lock is on.',
+  'lock.disabled': 'Lock is off.',
+  'lock.prompt': 'Enter your PIN',
+  'lock.open': 'Unlock',
+  'lock.scopeNote':
+    'This lock stops someone who borrows your phone from opening the app. The contents are not encrypted — anyone able to reach the device storage can still read them.',
+  'lock.forgotNote':
+    'There is no recovery. A forgotten PIN means the collection cannot be opened from this app again. Export a backup before turning it on.',
+  'lock.noRecovery': 'There is no PIN recovery. This app has no account and no email.',
+
+  'integrity.title': 'Check data integrity',
+  'integrity.note':
+    'Looks for dangling references and images that no longer belong to anything. Checking changes nothing — the findings are shown before anything is removed.',
+  'integrity.scan': 'Check now',
+  'integrity.clean': 'No problems found.',
+  'integrity.danglingPrimary': '{count} {count|title|titles} pointing at a missing cover',
+  'integrity.orphanImages': '{count} {count|image|images} with no owning title',
+  'integrity.orphanBlobs': '{count} image {count|file|files} with no matching record',
+  'integrity.danglingTaxonomies': '{count} {count|reference|references} to deleted catalog entries',
+  'integrity.reclaimable': 'About {size} can be freed.',
+  'integrity.backupFirst': 'Export a backup first if in doubt. Cleaning up cannot be undone.',
+  'integrity.repair': 'Clean up',
+  'integrity.confirmTitle': 'Clean up now?',
+  'integrity.confirmBody':
+    'Only unreachable data is removed: images with no owner, and pointers to things that no longer exist. Titles, images still in use, and catalog entries are untouched.',
+  'integrity.repaired': 'Cleaned up. About {size} freed.',
+
   'settings.storage': 'Storage',
   'settings.storage.works': 'Titles',
   'settings.storage.images': 'Images',

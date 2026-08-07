@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Plus } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { worksRepo } from '../../db/works.repo';
@@ -17,7 +17,13 @@ import {
 } from '../../lib/labels';
 import { useT } from '../../i18n/useT';
 import { useUiStore } from '../../stores/ui.store';
+import {
+  hariTanpaCadangan,
+  useBackupReminderStore,
+} from '../../stores/backupReminder.store';
 import { WorkCard } from '../../components/work/WorkCard';
+import { ContinueReading } from '../../components/work/ContinueReading';
+import { BulkClassifyDialog } from '../../components/work/BulkClassifyDialog';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { FilterChip } from '../../components/ui/FilterChip';
@@ -55,12 +61,14 @@ export function WorksPage() {
   const activeFilterCount = useUiStore((s) => s.activeFilterCount());
 
   const t = useT();
+  const navigate = useNavigate();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportBusy, setExportBusy] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [classifyOpen, setClassifyOpen] = useState(false);
 
   async function deleteSelected() {
     const ids = [...selectedIds];
@@ -140,6 +148,21 @@ export function WorksPage() {
   );
 
   const totalCount = useLiveQuery(() => worksRepo.count(), []);
+
+  // Patokan saat pengguna belum pernah mengekspor sama sekali: sudah berapa
+  // lama data ini ada tanpa salinan.
+  const oldestWorkAt = useLiveQuery(() => worksRepo.oldestCreatedAt(), []);
+  const lastBackupAt = useBackupReminderStore((s) => s.lastBackupAt);
+  const remindEnabled = useBackupReminderStore((s) => s.enabled);
+  const snoozedUntil = useBackupReminderStore((s) => s.snoozedUntil);
+  const snoozeBackup = useBackupReminderStore((s) => s.snooze);
+
+  const hariTanpaBackup = hariTanpaCadangan({
+    lastBackupAt,
+    enabled: remindEnabled,
+    snoozedUntil,
+    oldestWorkAt: oldestWorkAt ?? null,
+  });
   const taxonomies = useLiveQuery(() => taxonomiesRepo.listAll(), []);
 
   const taxonomyById = useMemo(
@@ -175,6 +198,14 @@ export function WorksPage() {
             <Button
               variant="ghost"
               size="sm"
+              disabled={selectedIds.size === 0 || exportBusy}
+              onClick={() => setClassifyOpen(true)}
+            >
+              {t('bulk.action')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-danger"
               disabled={selectedIds.size === 0 || exportBusy}
               onClick={() => setConfirmDelete(true)}
@@ -202,9 +233,46 @@ export function WorksPage() {
         onConfirm={() => void deleteSelected()}
       />
 
+      <BulkClassifyDialog
+        open={classifyOpen}
+        onOpenChange={setClassifyOpen}
+        workIds={[...selectedIds]}
+        onDone={(changed) => {
+          setClassifyOpen(false);
+          setExportMessage(t('bulk.result', { count: changed }));
+          leaveSelectMode();
+        }}
+      />
+
       {exportMessage && !selectMode && (
         <p className="mt-3 text-sm text-muted">{exportMessage}</p>
       )}
+
+      {/* Baris halus, bukan dialog. Modal yang menghadang saat orang hendak
+          mencatat bacaan akan ditutup refleks tanpa dibaca, dan lama-lama
+          diabaikan sepenuhnya. Disembunyikan selama mode pilih supaya tidak
+          bersaing dengan bilah aksi. */}
+      {hariTanpaBackup !== null && !selectMode && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning bg-elevated px-3 py-2.5">
+          <p className="min-w-0 flex-1 text-sm text-ink">
+            {t('backup.reminder', { days: hariTanpaBackup })}
+          </p>
+          <div className="flex shrink-0 gap-1">
+            <Button size="sm" onClick={() => navigate('/pengaturan')}>
+              {t('action.export')}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={snoozeBackup}>
+              {t('action.later')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Disembunyikan saat mencari atau memfilter: pengguna sedang mengejar
+          sesuatu yang spesifik, dan sorotan yang mengabaikan filternya justru
+          menghalangi. Disembunyikan pula selama mode pilih, karena isinya
+          bukan bagian dari yang bisa dipilih. */}
+      {!selectMode && !isFiltering && <ContinueReading />}
 
       {/* Pencarian dan filter disembunyikan selama memilih: mengubah filter
           akan membuat sebagian pilihan menghilang dari layar padahal tetap

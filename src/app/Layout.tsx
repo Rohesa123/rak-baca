@@ -1,4 +1,6 @@
 import { Suspense, useEffect } from 'react';
+import { App } from '@capacitor/app';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { Link, Outlet, useLocation } from 'react-router';
 import { Book, Settings, Tag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -7,6 +9,10 @@ import { useTheme } from '../hooks/useTheme';
 import { hideSplashScreen } from '../lib/native';
 import { useImageQualityStore } from '../stores/imageQuality.store';
 import { useLanguageStore } from '../stores/language.store';
+import { useBackupReminderStore } from '../stores/backupReminder.store';
+import { useLockStore } from '../stores/lock.store';
+import { LockScreen } from '../components/ui/LockScreen';
+import { isNative } from '../lib/platform';
 import { useT } from '../i18n/useT';
 import type { MessageKey } from '../i18n/messages';
 
@@ -27,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
 export function Layout() {
   const { pathname } = useLocation();
   const t = useT();
+  const locked = useLockStore((state) => state.locked);
 
   useTheme();
   useBackButton();
@@ -40,6 +47,33 @@ export function Layout() {
     // sudah siap sebelum layar mana pun sempat memakainya.
     void useImageQualityStore.getState().hydrate();
     void useLanguageStore.getState().hydrate();
+    void useBackupReminderStore.getState().hydrate();
+    void useLockStore.getState().hydrate();
+  }, []);
+
+  // Mengunci ulang saat aplikasi ditinggalkan lebih lama dari tenggang.
+  // Tanpa ini, kunci hanya berlaku pada peluncuran dingin — sementara kasus
+  // yang justru ingin dicegah adalah ponsel yang dipinjam sementara
+  // aplikasinya masih terbuka di daftar aplikasi terkini.
+  useEffect(() => {
+    if (!isNative()) return;
+
+    let handle: PluginListenerHandle | undefined;
+    let cancelled = false;
+
+    void App.addListener('appStateChange', ({ isActive }) => {
+      const lock = useLockStore.getState();
+      if (isActive) lock.maybeRelock();
+      else lock.markLeft();
+    }).then((registered) => {
+      if (cancelled) void registered.remove();
+      else handle = registered;
+    });
+
+    return () => {
+      cancelled = true;
+      void handle?.remove();
+    };
   }, []);
 
   // NavLink dengan `end` tidak cukup: tab Buku harus tetap menyala saat
@@ -48,6 +82,10 @@ export function Layout() {
     if (pathname === item.to) return true;
     return item.matches.some((prefix) => pathname.startsWith(prefix));
   }
+
+  // Dirender menggantikan seluruh isi aplikasi, bukan melapisinya, supaya
+  // judul karya tidak sempat terbaca sekilas di baliknya.
+  if (locked) return <LockScreen />;
 
   return (
     <div className="flex h-full flex-col bg-surface">
