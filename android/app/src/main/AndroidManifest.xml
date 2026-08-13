@@ -22,6 +22,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+              Membuat Rak Baca muncul di lembar "Bagikan" milik sistem.
+
+              Ini menghapus gesekan terbesar aplikasi ini: membaca di peramban,
+              lalu berpindah aplikasi dan mengetik ulang judul beserta
+              tautannya. Sekarang cukup Bagikan, dan form terbuka terisi.
+
+              Dibatasi text/plain — yang dikirim peramban saat membagikan
+              halaman. Gambar dan berkas tidak ditangani; keduanya sudah punya
+              jalur sendiri lewat pemilih galeri.
+
+              `launchMode="singleTask"` sudah ada di atas, jadi membagikan saat
+              aplikasi sedang berjalan memakai ulang instance yang sama dan
+              masuk lewat onNewIntent, bukan membuka salinan baru.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
         </activity>
 
         <provider

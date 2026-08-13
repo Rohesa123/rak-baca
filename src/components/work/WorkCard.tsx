@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { FocusEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router';
-import { Check, Plus, Star } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Plus, Star } from 'lucide-react';
 import type { Taxonomy, Work } from '../../db/models';
 import { isProgressAtEnd, readingStatus, worksRepo } from '../../db/works.repo';
 import {
@@ -20,6 +20,14 @@ interface WorkCardProps {
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  /**
+   * Diisi hanya saat urutan manual aktif. Panah menggantikan tombol +1 alih-alih
+   * menemaninya: saat sedang menyusun urutan, menambah progres bukan yang
+   * dicari, dan tiga tombol berjajar di kartu selebar ponsel jadi terlalu rapat.
+   */
+  onMove?: (direction: -1 | 1) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export function WorkCard({
@@ -28,6 +36,9 @@ export function WorkCard({
   selectable = false,
   selected = false,
   onToggleSelect,
+  onMove,
+  canMoveUp = false,
+  canMoveDown = false,
 }: WorkCardProps) {
   const t = useT();
   const type = work.typeId ? taxonomyById.get(work.typeId) : undefined;
@@ -219,16 +230,39 @@ export function WorkCard({
         Inilah aksi yang paling sering dipakai — kalau harus lewat form,
         pencatatan progres berhenti setelah minggu pertama.
       */}
-      {tracksProgress && (
-        <button
-          type="button"
-          aria-label={t('card.bumpProgress', { title: work.title })}
-          onClick={() => void worksRepo.bumpProgress(work.id)}
-          disabled={isProgressAtEnd(work)}
-          className="relative flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-xl bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-30"
-        >
-          <Plus size={20} aria-hidden="true" />
-        </button>
+      {onMove ? (
+        <div className="relative flex shrink-0 flex-col justify-center gap-1">
+          <button
+            type="button"
+            aria-label={t('card.moveUp', { title: work.title })}
+            onClick={() => onMove(-1)}
+            disabled={!canMoveUp}
+            className="flex h-8 w-11 items-center justify-center rounded-lg bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ChevronUp size={18} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={t('card.moveDown', { title: work.title })}
+            onClick={() => onMove(1)}
+            disabled={!canMoveDown}
+            className="flex h-8 w-11 items-center justify-center rounded-lg bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ChevronDown size={18} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        tracksProgress && (
+          <button
+            type="button"
+            aria-label={t('card.bumpProgress', { title: work.title })}
+            onClick={() => void worksRepo.bumpProgress(work.id)}
+            disabled={isProgressAtEnd(work)}
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-xl bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-30"
+          >
+            <Plus size={20} aria-hidden="true" />
+          </button>
+        )
       )}
     </div>
   );

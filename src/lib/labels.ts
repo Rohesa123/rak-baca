@@ -62,6 +62,7 @@ export const SORT_KEY: Record<WorkSort, MessageKey> = {
   title: 'sort.title',
   rating: 'sort.rating',
   progress: 'sort.progress',
+  manual: 'sort.manual',
 };
 
 export const SORTS: readonly WorkSort[] = [
@@ -71,6 +72,7 @@ export const SORTS: readonly WorkSort[] = [
   'title',
   'rating',
   'progress',
+  'manual',
 ];
 
 export const SEARCH_FIELDS: readonly SearchField[] = ['all', 'title', 'author'];

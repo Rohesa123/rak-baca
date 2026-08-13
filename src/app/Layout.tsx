@@ -1,7 +1,7 @@
 import { Suspense, useEffect } from 'react';
 import { App } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { Book, Settings, Tag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useBackButton } from '../hooks/useBackButton';
@@ -13,6 +13,7 @@ import { useBackupReminderStore } from '../stores/backupReminder.store';
 import { useLockStore } from '../stores/lock.store';
 import { LockScreen } from '../components/ui/LockScreen';
 import { isNative } from '../lib/platform';
+import { readSharedFromUrl } from '../lib/shareIntent';
 import { useT } from '../i18n/useT';
 import type { MessageKey } from '../i18n/messages';
 
@@ -34,6 +35,7 @@ export function Layout() {
   const { pathname } = useLocation();
   const t = useT();
   const locked = useLockStore((state) => state.locked);
+  const navigate = useNavigate();
 
   useTheme();
   useBackButton();
@@ -50,6 +52,43 @@ export function Layout() {
     void useBackupReminderStore.getState().hydrate();
     void useLockStore.getState().hydrate();
   }, []);
+
+  // Kiriman dari lembar "Bagikan" milik Android.
+  //
+  // MainActivity menuliskan ulang ACTION_SEND jadi tautan berskema aplikasi
+  // ini, sehingga yang sampai ke sini adalah deep link biasa — Capacitor tidak
+  // mengenal ACTION_SEND sama sekali.
+  //
+  // Dua jalur, dan keduanya diperlukan: `getLaunchUrl` untuk peluncuran dingin,
+  // `appUrlOpen` untuk berbagi saat aplikasi sudah berjalan.
+  useEffect(() => {
+    if (!isNative()) return;
+
+    let handle: PluginListenerHandle | undefined;
+    let cancelled = false;
+
+    const bukaForm = (url?: string | null) => {
+      const shared = readSharedFromUrl(url);
+      if (!shared) return;
+      // Dibawa lewat state rute, bukan query string: isinya judul dan tautan
+      // milik pengguna, dan URL bisa berakhir di riwayat maupun log.
+      void navigate('/karya/baru', { state: { shared }, replace: true });
+    };
+
+    void App.getLaunchUrl().then((result) => {
+      if (!cancelled) bukaForm(result?.url);
+    });
+
+    void App.addListener('appUrlOpen', ({ url }) => bukaForm(url)).then((registered) => {
+      if (cancelled) void registered.remove();
+      else handle = registered;
+    });
+
+    return () => {
+      cancelled = true;
+      void handle?.remove();
+    };
+  }, [navigate]);
 
   // Mengunci ulang saat aplikasi ditinggalkan lebih lama dari tenggang.
   // Tanpa ini, kunci hanya berlaku pada peluncuran dingin — sementara kasus

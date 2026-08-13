@@ -76,6 +76,19 @@ export interface Work {
 
   primaryImageId: string | null;
 
+  /**
+   * Posisi pada pengurutan manual. `undefined` berarti **belum pernah diurutkan
+   * manual** — sebuah keadaan yang sah, bukan data rusak, jadi tidak ada yang
+   * perlu "diperbaiki" pada pemasangan lama.
+   *
+   * **Sengaja tidak diindeks**, karena itu tidak menuntut versi Dexie baru
+   * maupun migrasi: IndexedDB menyimpan objek utuh dan hanya medan yang
+   * didaftarkan di `stores()` yang perlu diindeks. Pengurutan di aplikasi ini
+   * memang dilakukan di memori, bukan lewat indeks. Beberapa medan lain
+   * (`synopsis`, `notes`, `progressCurrent`) sudah lebih dulu begitu.
+   */
+  sortOrder?: number;
+
   createdAt: number;
   updatedAt: number;
 }
@@ -136,7 +149,8 @@ export type WorkSort =
   | 'oldest'
   | 'title'
   | 'rating'
-  | 'progress';
+  | 'progress'
+  | 'manual';
 
 /**
  * Medan yang disapu oleh `query`.

@@ -115,7 +115,30 @@ function sortWorks(rows: Work[], sort: WorkSort): Work[] {
       // bukan persentase: karya ongoing tidak punya total yang bisa dipakai
       // sebagai pembagi.
       return sorted.sort((a, b) => b.progressCurrent - a.progressCurrent);
+    case 'manual':
+      return sorted.sort(compareManual);
   }
+}
+
+/**
+ * Urutan manual, dengan `undefined` yang punya arti.
+ *
+ * Karya yang belum pernah diurutkan manual **tidak dianggap rusak** — ia hanya
+ * belum punya tempat, jadi jatuh ke belakang mengikuti urutan bawaan. Ini yang
+ * membuat pemasangan lama langsung bekerja benar tanpa perbaikan data apa pun,
+ * dan karya yang baru ditambah muncul di bawah alih-alih menyelinap ke tengah.
+ */
+function compareManual(a: Work, b: Work): number {
+  const pa = a.sortOrder;
+  const pb = b.sortOrder;
+
+  if (pa !== undefined && pb !== undefined) return pa - pb;
+  if (pa !== undefined) return -1;
+  if (pb !== undefined) return 1;
+
+  // Sama-sama belum berposisi: pakai urutan bawaan supaya hasilnya stabil,
+  // bukan bergantung pada urutan baca dari database.
+  return b.createdAt - a.createdAt;
 }
 
 /**
@@ -382,6 +405,70 @@ async function bulkClassify(ids: string[], patch: BulkClassifyPatch): Promise<nu
   return changed;
 }
 
+/**
+ * Menggeser satu karya satu langkah pada urutan manual.
+ *
+ * Tombol naik/turun, bukan seret-dan-lepas. Mengikuti keputusan yang sama pada
+ * galeri gambar — jauh lebih andal disentuh — dan menghindari kombinasi paling
+ * rawan di aplikasi ini sekarang: seret-dan-lepas di atas daftar yang
+ * tervirtualisasi, tempat baris tujuan bisa saja belum dirender.
+ *
+ * Menulis **hanya baris yang posisinya benar-benar berubah**. Pada pemanggilan
+ * pertama itu berarti seluruh daftar, karena belum ada yang punya `sortOrder`;
+ * sesudahnya cukup dua baris.
+ *
+ * `filters` diteruskan supaya penggeseran mengikuti apa yang sedang dilihat
+ * pengguna. Tanpa itu, menggeser sesuatu di daftar terfilter akan meloncatinya
+ * melewati karya-karya yang sedang tersembunyi.
+ */
+async function moveInManualOrder(
+  id: string,
+  direction: -1 | 1,
+  filters: WorkFilters = {},
+): Promise<boolean> {
+  // Dua daftar, dan keduanya diperlukan.
+  //
+  // Yang **terlihat** menentukan ke mana karya itu pindah: satu langkah berarti
+  // bertukar tempat dengan tetangga yang benar-benar terlihat, bukan dengan
+  // karya yang sedang tersembunyi filter.
+  //
+  // Yang **global** menentukan angka yang ditulis. Menomori ulang dari daftar
+  // terfilter adalah kesalahan yang halus tapi merusak: posisinya bertabrakan
+  // dengan karya di luar filter, dan karya yang tidak pernah disentuh ikut
+  // teracak — baru ketahuan setelah filternya dilepas.
+  const [semua, terlihat] = await Promise.all([
+    list({ sort: 'manual' }),
+    list({ ...filters, sort: 'manual' }),
+  ]);
+
+  const posisiTerlihat = terlihat.findIndex((work) => work.id === id);
+  const tetangga = terlihat[posisiTerlihat + direction];
+  if (posisiTerlihat === -1 || !tetangga) return false;
+
+  const from = semua.findIndex((work) => work.id === id);
+  if (from === -1) return false;
+
+  const [moved] = semua.splice(from, 1);
+
+  // Dicari ulang setelah splice: indeks tetangga bergeser kalau ia berada
+  // setelah posisi asal.
+  const anchor = semua.findIndex((work) => work.id === tetangga.id);
+  if (anchor === -1) return false;
+
+  semua.splice(direction === -1 ? anchor : anchor + 1, 0, moved);
+
+  const now = Date.now();
+
+  await db.transaction('rw', db.works, async () => {
+    for (const [index, work] of semua.entries()) {
+      if (work.sortOrder === index) continue;
+      await db.works.update(work.id, { sortOrder: index, updatedAt: now });
+    }
+  });
+
+  return true;
+}
+
 async function setProgress(id: string, current: number): Promise<void> {
   const now = Date.now();
 
@@ -399,6 +486,7 @@ export const worksRepo = {
   list,
   findSimilarTitles,
   bulkClassify,
+  moveInManualOrder,
   create,
   update,
   remove,

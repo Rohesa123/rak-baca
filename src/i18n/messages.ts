@@ -33,6 +33,7 @@ export const id = {
   'action.restore': 'Kembalikan',
   'action.discard': 'Buang',
   'action.later': 'Nanti',
+  'action.share': 'Bagikan',
 
   'common.loading': 'Memuat…',
   'common.processing': 'Memproses…',
@@ -93,11 +94,26 @@ export const id = {
     'Tipe dan status terbit akan menimpa nilai lama pada {count} karya. Genre dan tema hanya ditambahkan, tidak pernah menghapus yang sudah ada.',
   'bulk.result': '{count} karya diperbarui.',
 
+  // bagikan sebagai teks
+  'share.title': 'Daftar bacaan',
+  'share.heading': 'Rak Baca — {count} karya',
+  'share.shared': '{count} karya dibagikan.',
+  // Dibedakan dari "dibagikan": di peramban tidak ada lembar berbagi, jadi
+  // teksnya disalin. Menyebutnya dibagikan akan membuat pengguna menunggu
+  // aplikasi tujuan yang tidak pernah muncul.
+  'share.copied': '{count} karya disalin ke papan klip.',
+  'share.failed': 'Gagal membagikan daftar.',
+
   // kartu karya
   'card.open': 'Buka {title}',
   'card.favorite': 'Favorit',
   'card.bumpProgress': 'Tambah progres {title}',
   'card.editProgress': 'Ubah progres {title}',
+  'card.moveUp': 'Naikkan {title}',
+  'card.moveDown': 'Turunkan {title}',
+  // Muncul sekali di atas daftar saat urutan sendiri aktif, bukan di tiap kartu.
+  'works.manualHint':
+    'Ketuk panah untuk menggeser. Karya yang belum pernah digeser tetap di bawah, mengikuti urutan terbaru ditambah.',
 
   // status baca
   'readingStatus.belum': 'Belum mulai',
@@ -127,6 +143,7 @@ export const id = {
   'sort.title': 'Judul A–Z',
   'sort.rating': 'Skor tertinggi',
   'sort.progress': 'Progres terjauh',
+  'sort.manual': 'Urutan sendiri',
 
   // taksonomi
   'taxonomy.type': 'Tipe',
@@ -139,6 +156,25 @@ export const id = {
   'taxonomy.theme.hint': 'Tentang apa: Isekai, School, Historical',
   'taxonomy.genre.hint': 'Rasanya seperti apa: Drama, Romance, Action',
   'taxonomy.pubstatus.hint': 'Status terbit: Ongoing, Completed, Hiatus, Axed',
+
+  // statistik
+  'stats.title': 'Statistik koleksi',
+  'stats.emptyHint': 'Catat karya pertama dulu, statistiknya menyusul sendiri.',
+  'stats.total': 'Total karya',
+  'stats.reading': 'Sedang dibaca',
+  'stats.finished': 'Selesai',
+  'stats.notStarted': 'Belum mulai',
+  'stats.favorites': 'Favorit',
+  'stats.avgRating': 'Rata-rata skor',
+  'stats.thisYear': '{count} karya diselesaikan tahun ini.',
+  // Dipisah per satuan: menjumlahkan chapter dengan halaman menghasilkan angka
+  // yang terlihat berarti padahal tidak.
+  'stats.readSoFar': 'Sudah dibaca',
+  'stats.topTypes': 'Tipe terbanyak',
+  'stats.topGenres': 'Genre terbanyak',
+  'stats.topThemes': 'Tema terbanyak',
+  'stats.untrackedNote':
+    '{count} karya tidak dihitung dalam status baca karena tipenya memang tidak melacak progres, seperti cerpen dan artikel.',
 
   // pengaturan
   'settings.title': 'Pengaturan',
@@ -305,6 +341,10 @@ export const id = {
   'catalog.noProgress': 'Tanpa progres',
   'catalog.progressUnit': 'Satuan progres',
   'catalog.saveName': 'Simpan nama',
+  'catalog.filterPlaceholder': 'Cari {kind}',
+  'catalog.filterLabel': 'Cari nilai katalog',
+  'catalog.noMatch': 'Tidak ada yang cocok',
+  'catalog.noMatchHint': 'Tidak ada nilai yang memuat “{query}”.',
   'catalog.nameRequired': 'Nama tidak boleh kosong',
   'catalog.duplicate': '"{name}" sudah ada',
   'catalog.saveFailed': 'Gagal menyimpan',
@@ -392,6 +432,7 @@ export const en: Record<MessageKey, string> = {
   'action.restore': 'Restore',
   'action.discard': 'Discard',
   'action.later': 'Later',
+  'action.share': 'Share',
 
   'common.loading': 'Loading…',
   'common.processing': 'Working…',
@@ -444,10 +485,20 @@ export const en: Record<MessageKey, string> = {
     'Type and publication status will replace the existing values on {count} {count|title|titles}. Genres and themes are only added, never removed.',
   'bulk.result': '{count} {count|title|titles} updated.',
 
+  'share.title': 'Reading list',
+  'share.heading': 'Rak Baca — {count} {count|title|titles}',
+  'share.shared': '{count} {count|title|titles} shared.',
+  'share.copied': '{count} {count|title|titles} copied to the clipboard.',
+  'share.failed': 'Could not share the list.',
+
   'card.open': 'Open {title}',
   'card.favorite': 'Favorite',
   'card.bumpProgress': 'Advance progress for {title}',
   'card.editProgress': 'Edit progress for {title}',
+  'card.moveUp': 'Move {title} up',
+  'card.moveDown': 'Move {title} down',
+  'works.manualHint':
+    'Tap the arrows to move a title. Anything never moved stays at the bottom, in newest-first order.',
 
   'readingStatus.belum': 'Not started',
   'readingStatus.berjalan': 'Reading',
@@ -473,6 +524,7 @@ export const en: Record<MessageKey, string> = {
   'sort.title': 'Title A–Z',
   'sort.rating': 'Highest rated',
   'sort.progress': 'Furthest progress',
+  'sort.manual': 'My own order',
 
   'taxonomy.type': 'Type',
   'taxonomy.theme': 'Theme',
@@ -482,6 +534,22 @@ export const en: Record<MessageKey, string> = {
   'taxonomy.theme.hint': 'What it is about: Isekai, School, Historical',
   'taxonomy.genre.hint': 'How it feels: Drama, Romance, Action',
   'taxonomy.pubstatus.hint': 'Publication status: Ongoing, Completed, Hiatus, Axed',
+
+  'stats.title': 'Collection stats',
+  'stats.emptyHint': 'Record your first title and the numbers will follow.',
+  'stats.total': 'Titles',
+  'stats.reading': 'Reading',
+  'stats.finished': 'Finished',
+  'stats.notStarted': 'Not started',
+  'stats.favorites': 'Favourites',
+  'stats.avgRating': 'Average score',
+  'stats.thisYear': '{count} {count|title|titles} finished this year.',
+  'stats.readSoFar': 'Read so far',
+  'stats.topTypes': 'Most common types',
+  'stats.topGenres': 'Most common genres',
+  'stats.topThemes': 'Most common themes',
+  'stats.untrackedNote':
+    '{count} {count|title|titles} are left out of the reading status counts, because their format does not track progress — short stories and articles, for instance.',
 
   'settings.title': 'Settings',
   'settings.language': 'Language',
@@ -636,6 +704,10 @@ export const en: Record<MessageKey, string> = {
   'catalog.noProgress': 'No progress',
   'catalog.progressUnit': 'Progress unit',
   'catalog.saveName': 'Save name',
+  'catalog.filterPlaceholder': 'Search {kind}',
+  'catalog.filterLabel': 'Search catalog entries',
+  'catalog.noMatch': 'Nothing matches',
+  'catalog.noMatchHint': 'No entry contains “{query}”.',
   'catalog.nameRequired': 'Name cannot be empty',
   'catalog.duplicate': '"{name}" already exists',
   'catalog.saveFailed': 'Could not save',

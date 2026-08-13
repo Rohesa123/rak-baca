@@ -6,6 +6,7 @@ import { worksRepo } from '../../db/works.repo';
 import { taxonomiesRepo } from '../../db/taxonomies.repo';
 import type { WorkSort } from '../../db/models';
 import {
+  PROGRESS_UNIT_SHORT_KEY,
   READING_STATUSES,
   READING_STATUS_KEY,
   SEARCH_FIELDS,
@@ -21,7 +22,7 @@ import {
   hariTanpaCadangan,
   useBackupReminderStore,
 } from '../../stores/backupReminder.store';
-import { WorkCard } from '../../components/work/WorkCard';
+import { WorkList } from '../../components/work/WorkList';
 import { ContinueReading } from '../../components/work/ContinueReading';
 import { BulkClassifyDialog } from '../../components/work/BulkClassifyDialog';
 import { Button } from '../../components/ui/Button';
@@ -93,6 +94,63 @@ export function WorksPage() {
   function leaveSelectMode() {
     setSelectMode(false);
     setSelectedIds(new Set());
+  }
+
+  /**
+   * Membagikan pilihan sebagai teks biasa, bukan berkas.
+   *
+   * Berbeda tujuan dari ekspor ZIP: ini untuk dikirim ke orang lain, bukan
+   * untuk dipulihkan. Karena itu isinya judul, tipe, posisi baca, dan tautan —
+   * bukan seluruh medan.
+   */
+  async function shareSelectedAsText() {
+    setExportBusy(true);
+    setExportMessage(null);
+
+    try {
+      const { formatWorksAsText, shareText } = await import('../../lib/shareText');
+      const dipilih = (works ?? []).filter((work) => selectedIds.has(work.id));
+
+      const teks = formatWorksAsText({
+        works: dipilih,
+        taxonomyById,
+        shortUnit: (unit) => t(PROGRESS_UNIT_SHORT_KEY[unit]),
+        heading: t('share.heading', { count: dipilih.length }),
+      });
+
+      const cara = await shareText(teks, t('share.title'));
+      setExportMessage(t(cara === 'salin' ? 'share.copied' : 'share.shared', {
+        count: dipilih.length,
+      }));
+      leaveSelectMode();
+    } catch {
+      setExportMessage(t('share.failed'));
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  /**
+   * Menggeser satu karya pada urutan manual.
+   *
+   * Filter yang sedang aktif ikut diteruskan, supaya penggeseran mengikuti apa
+   * yang benar-benar terlihat. Tanpa itu, menggeser sesuatu di daftar terfilter
+   * akan meloncatinya melewati karya yang sedang tersembunyi — dan hasilnya
+   * baru terlihat salah setelah filternya dilepas.
+   */
+  function moveWork(id: string, direction: -1 | 1) {
+    void worksRepo.moveInManualOrder(id, direction, {
+      query,
+      searchField,
+      typeId,
+      pubStatusId,
+      themeIds,
+      genreIds,
+      excludeThemeIds,
+      excludeGenreIds,
+      readingStatus: readingStatus ?? undefined,
+      favoritesOnly,
+    });
   }
 
   async function exportSelected() {
@@ -213,6 +271,14 @@ export function WorksPage() {
               {t('action.delete')}
             </Button>
             <Button
+              variant="ghost"
+              size="sm"
+              disabled={selectedIds.size === 0 || exportBusy}
+              onClick={() => void shareSelectedAsText()}
+            >
+              {t('action.share')}
+            </Button>
+            <Button
               size="sm"
               disabled={selectedIds.size === 0 || exportBusy}
               onClick={() => void exportSelected()}
@@ -244,8 +310,16 @@ export function WorksPage() {
         }}
       />
 
-      {exportMessage && !selectMode && (
-        <p className="mt-3 text-sm text-muted">{exportMessage}</p>
+      {/*
+        Sengaja tidak lagi disyaratkan `!selectMode`. Aksi yang berhasil memang
+        keluar dari mode pilih sehingga pesannya terlihat, tetapi aksi yang
+        GAGAL tetap di dalamnya — dan dengan syarat itu, kegagalan berbagi atau
+        mengekspor tidak menampilkan apa pun sama sekali.
+      */}
+      {exportMessage && <p className="mt-3 text-sm text-muted">{exportMessage}</p>}
+
+      {sort === 'manual' && !selectMode && (
+        <p className="mt-3 text-xs leading-relaxed text-muted">{t('works.manualHint')}</p>
       )}
 
       {/* Baris halus, bukan dialog. Modal yang menghadang saat orang hendak
@@ -457,19 +531,14 @@ export function WorksPage() {
             />
           )
         ) : (
-          <ul className="flex flex-col gap-2">
-            {works.map((work) => (
-              <li key={work.id}>
-                <WorkCard
-                  work={work}
-                  taxonomyById={taxonomyById}
-                  selectable={selectMode}
-                  selected={selectedIds.has(work.id)}
-                  onToggleSelect={() => toggleSelected(work.id)}
-                />
-              </li>
-            ))}
-          </ul>
+          <WorkList
+            works={works}
+            onMove={sort === 'manual' ? moveWork : undefined}
+            taxonomyById={taxonomyById}
+            selectable={selectMode}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelected}
+          />
         )}
       </div>
 

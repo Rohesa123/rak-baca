@@ -62,6 +62,13 @@ export function TaxonomiesPage() {
 
   const rows = useLiveQuery(() => taxonomiesRepo.listWithCounts(kind), [kind]);
 
+  // Penyaringan di sini, bukan di kueri: daftarnya paling banyak beberapa ratus
+  // baris dan sudah ada di memori, jadi menyaringnya ulang jauh lebih murah
+  // daripada memuat ulang dari database pada setiap ketikan.
+  const [filter, setFilter] = useState('');
+  const keyword = filter.trim().toLowerCase();
+  const shown = (rows ?? []).filter((row) => row.name.toLowerCase().includes(keyword));
+
   const [name, setName] = useState('');
   const [color, setColor] = useState(PALETTE[0]);
   const [addError, setAddError] = useState<string | null>(null);
@@ -134,6 +141,9 @@ export function TaxonomiesPage() {
               setKind(value);
               setEditingId(null);
               setAddError(null);
+              // Dikosongkan saat berpindah sumbu: kata kunci yang tertinggal
+              // membuat sumbu baru tampak kosong tanpa alasan yang terlihat.
+              setFilter('');
             }}
           >
             {t(TAXONOMY_KIND_KEY[value])}
@@ -163,6 +173,20 @@ export function TaxonomiesPage() {
         )}
       </form>
 
+      {/* Muncul hanya setelah daftarnya cukup panjang untuk sulit dipindai.
+          Pada delapan nilai, kotak pencarian justru menambah kerja mata tanpa
+          menghemat apa pun. */}
+      {rows !== undefined && rows.length > 12 && (
+        <input
+          type="search"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          placeholder={t('catalog.filterPlaceholder', { kind: t(TAXONOMY_KIND_KEY[kind]).toLowerCase() })}
+          aria-label={t('catalog.filterLabel')}
+          className="mt-5 h-11 w-full rounded-xl border border-border bg-elevated px-3 text-base text-ink outline-none placeholder:text-muted focus:border-brand"
+        />
+      )}
+
       <div className="mt-7">
         {rows === undefined ? (
           <p className="text-sm text-muted">{t('common.loading')}</p>
@@ -171,9 +195,14 @@ export function TaxonomiesPage() {
             title={t('catalog.empty')}
             description={t('catalog.emptyHint')}
           />
+        ) : shown.length === 0 ? (
+          <EmptyState
+            title={t('catalog.noMatch')}
+            description={t('catalog.noMatchHint', { query: filter.trim() })}
+          />
         ) : (
           <ul className="flex flex-col gap-2">
-            {rows.map((row) =>
+            {shown.map((row) =>
               editingId === row.id ? (
                 <li key={row.id} className="rounded-xl border border-brand bg-elevated p-3">
                   <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">

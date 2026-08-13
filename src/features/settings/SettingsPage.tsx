@@ -22,6 +22,7 @@ import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { TextField } from '../../components/ui/TextField';
+import { Link } from 'react-router';
 import { LockSettings } from './LockSettings';
 import { IntegritySettings } from './IntegritySettings';
 
@@ -400,6 +401,16 @@ export function SettingsPage() {
                 })
           }
         />
+      </section>
+
+      <section className="mt-8">
+        <Link
+          to="/statistik"
+          className="flex items-center justify-between rounded-xl border border-border bg-elevated px-3 py-3 text-sm text-ink active:bg-border"
+        >
+          <span>{t('stats.title')}</span>
+          <span className="text-muted" aria-hidden="true">›</span>
+        </Link>
       </section>
 
       <LockSettings />

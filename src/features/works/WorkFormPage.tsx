@@ -1,10 +1,11 @@
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { worksRepo } from '../../db/works.repo';
 import { imagesRepo } from '../../db/images.repo';
 import { WorkForm, EMPTY_WORK_FORM } from '../../components/work/WorkForm';
 import type { WorkFormValues } from '../../components/work/WorkForm';
 import type { CoverDraft } from '../../components/work/CoverPicker';
+import type { SharedPayload } from '../../lib/shareIntent';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useT } from '../../i18n/useT';
@@ -25,6 +26,12 @@ export function WorkFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
+
+  // Diisi saat form dibuka dari lembar "Bagikan" Android. Dibawa lewat state
+  // rute, bukan query string, karena isinya milik pengguna dan URL bisa
+  // berakhir di riwayat maupun log.
+  const location = useLocation();
+  const shared = (location.state as { shared?: SharedPayload } | null)?.shared;
   const t = useT();
 
   // `undefined` = masih memuat, `null` = mode tambah atau karya tidak ditemukan.
@@ -135,7 +142,13 @@ export function WorkFormPage() {
         synopsis: existing.synopsis ?? '',
         notes: existing.notes ?? '',
       }
-    : EMPTY_WORK_FORM;
+    : shared
+      ? {
+          ...EMPTY_WORK_FORM,
+          title: shared.title,
+          sourceUrl: shared.url,
+        }
+      : EMPTY_WORK_FORM;
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-6 pb-8">
@@ -145,6 +158,13 @@ export function WorkFormPage() {
       />
 
       <WorkForm
+        /*
+          `WorkForm` menyalin `initialValues` ke state saat mount, jadi tanpa
+          key ini membagikan tautan kedua selagi form pertama masih terbuka
+          tidak akan mengubah apa pun: rutenya sama, komponennya tidak di-mount
+          ulang, dan isian tetap menampilkan kiriman yang lama.
+        */
+        key={shared ? `${shared.url}|${shared.title}` : (existing?.id ?? 'baru')}
         initialValues={initialValues}
         workId={existing?.id}
         existingCoverThumb={coverImage?.thumbBlob ?? null}

@@ -12,6 +12,7 @@ Most reading trackers are built around books you own or intend to buy. This one 
 
 **Tracking what you read**
 
+- **Share a page to Rak Baca** from your browser and the form opens with the title and link already filled in — no switching apps to retype what you were just looking at
 - Record a work with its title, an alternative title for works known under more than one name, author, synopsis, private notes, and a link back to the source
 - Track progress in chapters or pages, with or without a known total
 - Advance one unit at a time, or tap the number to type it directly — twenty chapters in one sitting should not mean twenty taps
@@ -27,8 +28,10 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - Four independent axes — type, genre, theme, and publication status — each fully editable, with 55 sensible defaults seeded on first run
 - Search everything at once, or narrow it to just titles or just authors
 - Filter by any combination of axes, **including exclusion**: "mystery, but not romance" is a single query
-- Genre and theme pickers filter as you type, so the lists stay usable well past a hundred entries
-- Sort several ways, and select multiple works to delete, export, or reclassify at once
+- Genre and theme pickers filter as you type, and so does the catalog screen itself, so the lists stay usable well past a hundred entries
+- Sort several ways, including an order you arrange yourself — anything you have never moved stays at the bottom, so an existing collection needs no setup
+- Select multiple works to delete, export, reclassify, or share at once
+- Share a selection as plain text — titles, where you are up to, and the links — for pasting into a chat
 - Bulk classification only ever *adds* genres and themes — there is no button that replaces them, because on twenty titles at once that would not be noticed until too late
 
 **Images**
@@ -43,6 +46,7 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - A reminder appears on the shelf after a month without a backup — dismissible, and switchable off
 - Export the whole collection to a ZIP and import it back — merge-only and idempotent, so importing the same file twice changes nothing
 - Import never overwrites, but it does fill gaps: a work you already have gains any images the archive carries and it is missing
+- Collection stats: reading status, chapters and pages read, and your most common types, genres, and themes
 - A data integrity check in Settings that finds dangling references and orphaned images, reports what it found, and only removes what nothing can reach
 - An optional PIN lock, off by default — a display barrier, not encryption, and the settings screen says so plainly
 - Indonesian and English throughout
@@ -71,6 +75,7 @@ Because relying on memory for something with permanent consequences is a poor de
 | UI state | Zustand 5 | ~1 KB; holds filters and preferences only — the works themselves stay in Dexie |
 | Routing | React Router 8 | Hash router, which sidesteps origin differences between the dev server and Capacitor |
 | Cropping | react-easy-crop | Capacitor's native `editPhoto` is not implemented on web, which would have made cropping untestable |
+| Long lists | `@tanstack/react-virtual` | Only past 80 titles — below that the plain list keeps browser scroll restoration and Ctrl+F, which virtualisation gives up |
 | Archives | fflate | ~8 KB and synchronous; a full ZIP library would have cost more than the feature |
 | Native shell | Capacitor 8 | Camera, App, Preferences, Splash Screen, Status Bar, Haptics, Filesystem, Share |
 
@@ -102,11 +107,12 @@ src/
 │  ├─ ui/        Primitives: Button, Chip, FilterChip, Select, ConfirmDialog…
 │  └─ work/      WorkCard, WorkForm, ImageViewer, CropDialog, TagPicker…
 ├─ db/           Dexie instance, models, seeds, and one repository per concern
-├─ features/     Page-level screens: works, taxonomies, settings
+├─ features/     Page-level screens: works, taxonomies, stats, settings
 ├─ hooks/        useTheme, useBackButton, useObjectUrl
 ├─ i18n/         Message catalogue and the useT hook
-├─ lib/          Images, colour maths, ZIP backup, native wrappers, IDs
-└─ stores/       Zustand stores for UI state
+├─ lib/          Images, colour maths, ZIP backup, share text, integrity check,
+│                stats, share-intent parsing, native wrappers, IDs
+└─ stores/       Zustand stores for UI state, backup reminder, and app lock
 ```
 
 Components never touch Dexie directly — every query goes through `src/db/*.repo.ts`. That keeps query logic in one place and confines the blast radius of a future storage change to a single folder.
@@ -132,6 +138,7 @@ Four decisions worth knowing:
 
 - **One taxonomy table, discriminated by `kind`.** Types, genres, themes, and publication statuses behave identically — create, rename, recolour, delete, count usages. Four near-identical tables would have meant four near-identical repositories.
 - **`&[kind+name]` rather than `&name`.** Two genres cannot share a name, but a genre and a theme may. Those are different axes, and a work can legitimately be tagged with both.
+- **The `sortOrder` that drives manual ordering is stored on `works` but deliberately absent above.** IndexedDB stores whole objects, so a field only needs declaring here if it is indexed — and this app sorts in memory anyway. That is why manual ordering shipped with no schema version bump and no migration. (The `sortOrder` visible on `images` is a different field, and that one *is* indexed.)
 - **`favoritedAt` is a timestamp, not a boolean.** IndexedDB cannot index booleans, so a `isFavorite: true` field could not be queried efficiently. A nullable timestamp indexes cleanly and records *when*, which is strictly more information.
 - **Blobs live apart from thumbnails.** Keeping full-size images inline would mean a gallery grid pulled megabytes into memory just to draw postage stamps.
 
@@ -189,9 +196,13 @@ Feature-complete. The data layer, every screen, images, export and import, both 
 
 What has **not** been confirmed is behaviour on real hardware. The native picker, EXIF orientation on real photos, the physical back button, and persistence after a force-stop can only be checked on a device.
 
-The gallery permission flow deserves a specific mention: the first release never requested the permission at all, which made image picking fail outright on Android 10. That is fixed, but a browser has no concept of these permissions, so the fix can only be proven on a device running Android 12 or older. If you are testing it, revoke the permission in the system settings first — otherwise the dialog will not appear and there is nothing to observe.
+Two pieces cannot be tested in a browser at all, because a browser has no equivalent of them:
 
-Not implemented: manual drag-and-drop ordering, list virtualisation, collection statistics, sharing a list as text, and an AAB bundle for the Play Store.
+**Gallery permission.** The first release never requested it, which made image picking fail outright on Android 10. That is fixed, but the fix can only be proven on a device running Android 12 or older — newer versions route through the system photo picker, which needs no permission. If you are testing it, revoke the permission in the system settings first, or the dialog will not appear and there is nothing to observe.
+
+**Share to Rak Baca.** `MainActivity` rewrites the incoming `ACTION_SEND` intent into a deep link, because Capacitor does not surface share intents to JavaScript on its own. The parsing on the JavaScript side is covered, but whether the app appears in the system share sheet and whether the rewritten intent arrives intact are device-only questions.
+
+Not implemented: an AAB bundle for the Play Store.
 
 ## License
 

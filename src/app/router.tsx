@@ -29,6 +29,7 @@ const SettingsPage = lazyPage(
   () => import('../features/settings/SettingsPage'),
   'SettingsPage',
 );
+const StatsPage = lazyPage(() => import('../features/stats/StatsPage'), 'StatsPage');
 
 /**
  * Hash router, bukan browser router. Capacitor menyajikan aplikasi dari
@@ -49,6 +50,9 @@ export const router = createHashRouter([
       { path: 'karya/:id/ubah', Component: WorkFormPage },
       { path: 'katalog', Component: TaxonomiesPage },
       { path: 'pengaturan', Component: SettingsPage },
+      // Tanpa tab sendiri: statistik dilihat sesekali, dan menambah tab
+      // keempat menyempitkan tiga tab yang dipakai setiap hari.
+      { path: 'statistik', Component: StatsPage },
       // Tanpa ini, hash yang salah ketik atau tautan lama menghasilkan layar
       // kosong tanpa penjelasan. Di aplikasi, mengembalikan ke beranda jauh
       // lebih berguna daripada halaman "tidak ditemukan".
