@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { ImageBlob, Taxonomy, Work, WorkImage } from './models';
+import type { ImageBlob, ReadingLogEntry, Taxonomy, Work, WorkImage } from './models';
 import { seedTaxonomies } from './seed.taxonomies';
 
 /**
@@ -43,6 +43,7 @@ export const db = new Dexie('rak-baca') as Dexie & {
   taxonomies: EntityTable<Taxonomy, 'id'>;
   images: EntityTable<WorkImage, 'id'>;
   imageBlobs: EntityTable<ImageBlob, 'id'>;
+  readingLog: EntityTable<ReadingLogEntry, 'id'>;
 };
 
 db.version(1).stores({
@@ -59,6 +60,28 @@ db.version(1).stores({
 
   // Berkas ukuran penuh dipisah supaya grid galeri hanya membaca thumbnail.
   imageBlobs: 'id',
+});
+
+/**
+ * Versi 2 — riwayat baca.
+ *
+ * **Migrasi pertama sejak v1.0.0, dan sengaja dipilih bentuk yang paling aman:
+ * menambah tabel, bukan mengubah yang sudah ada.**
+ *
+ * Hanya tabel yang berubah yang perlu didaftarkan di sini; Dexie membawa serta
+ * seluruh tabel v1 apa adanya. Karena tidak ada data yang berubah bentuk,
+ * `.upgrade()` tidak diperlukan sama sekali — tidak satu baris pun data lama
+ * yang disentuh, dan pemasangan lama membuka database yang sama seperti biasa.
+ *
+ * `version(1)` di atas tidak boleh disunting, sekarang maupun nanti. Menyunting
+ * versi lama membuat Dexie menolak membuka database milik pengguna yang belum
+ * memperbarui.
+ *
+ * `[workId+at]` dipakai untuk mengambil riwayat satu karya secara terurut
+ * tanpa memindai seluruh tabel.
+ */
+db.version(2).stores({
+  readingLog: 'id, workId, at, [workId+at]',
 });
 
 db.on('populate', (tx) => {

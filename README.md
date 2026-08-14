@@ -19,6 +19,7 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - Progress is hidden entirely for formats where it makes no sense — a short story or an article has no chapter to remember
 - Reading status is derived from progress rather than set by hand, so it can never contradict the numbers
 - The shelf opens with what you were last reading, ahead of whatever sort or filter is active — it answers the question the app exists for
+- Open the source link straight from a card, without stepping through the detail page first
 - Mark favourites, give a personal rating, and record when you finished
 - A half-finished entry is kept as a draft, so switching tabs mid-typing does not throw the work away
 - Typing a title that already exists raises a warning, never a block — the same story can legitimately exist as both a manga and a novel, and the warning names the type of what it found
@@ -29,7 +30,8 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - Search everything at once, or narrow it to just titles or just authors
 - Filter by any combination of axes, **including exclusion**: "mystery, but not romance" is a single query
 - Genre and theme pickers filter as you type, and so does the catalog screen itself, so the lists stay usable well past a hundred entries
-- Sort several ways, including an order you arrange yourself — anything you have never moved stays at the bottom, so an existing collection needs no setup
+- Sort several ways, including an order you arrange yourself — tap an arrow to move a step, hold it to send a title to either end
+- Three list views: cards, compact, or a grid of covers
 - Select multiple works to delete, export, reclassify, or share at once
 - Share a selection as plain text — titles, where you are up to, and the links — for pasting into a chat
 - Bulk classification only ever *adds* genres and themes — there is no button that replaces them, because on twenty titles at once that would not be noticed until too late
@@ -46,7 +48,8 @@ Most reading trackers are built around books you own or intend to buy. This one 
 - A reminder appears on the shelf after a month without a backup — dismissible, and switchable off
 - Export the whole collection to a ZIP and import it back — merge-only and idempotent, so importing the same file twice changes nothing
 - Import never overwrites, but it does fill gaps: a work you already have gains any images the archive carries and it is missing
-- Collection stats: reading status, chapters and pages read, and your most common types, genres, and themes
+- Collection stats: reading status, chapters and pages read, your most common types, genres, and themes
+- Reading history, kept locally: a daily streak, active days, and what you got through in the last week and month
 - A data integrity check in Settings that finds dangling references and orphaned images, reports what it found, and only removes what nothing can reach
 - An optional PIN lock, off by default — a display barrier, not encryption, and the settings screen says so plainly
 - Indonesian and English throughout
@@ -105,14 +108,16 @@ src/
 ├─ app/          Router and layout shell
 ├─ components/
 │  ├─ ui/        Primitives: Button, Chip, FilterChip, Select, ConfirmDialog…
-│  └─ work/      WorkCard, WorkForm, ImageViewer, CropDialog, TagPicker…
+│  └─ work/      WorkList, WorkCard, WorkTile, WorkForm, ContinueReading,
+│                ImageViewer, CropDialog, TaxonomyPicker…
 ├─ db/           Dexie instance, models, seeds, and one repository per concern
 ├─ features/     Page-level screens: works, taxonomies, stats, settings
 ├─ hooks/        useTheme, useBackButton, useObjectUrl
 ├─ i18n/         Message catalogue and the useT hook
 ├─ lib/          Images, colour maths, ZIP backup, share text, integrity check,
 │                stats, share-intent parsing, native wrappers, IDs
-└─ stores/       Zustand stores for UI state, backup reminder, and app lock
+└─ stores/       Zustand stores for filters, view mode, theme, accent,
+                 language, image quality, backup reminder, and app lock
 ```
 
 Components never touch Dexie directly — every query goes through `src/db/*.repo.ts`. That keeps query logic in one place and confines the blast radius of a future storage change to a single folder.
@@ -131,6 +136,12 @@ db.version(1).stores({
   taxonomies: 'id, kind, name, &[kind+name], createdAt',
   images:     'id, workId, [workId+role], role, sortOrder',
   imageBlobs: 'id',
+});
+
+// Version 2 only adds a table. Dexie carries the v1 stores across untouched,
+// and since no existing data changes shape, no `.upgrade()` is needed.
+db.version(2).stores({
+  readingLog: 'id, workId, at, [workId+at]',
 });
 ```
 
@@ -196,11 +207,15 @@ Feature-complete. The data layer, every screen, images, export and import, both 
 
 What has **not** been confirmed is behaviour on real hardware. The native picker, EXIF orientation on real photos, the physical back button, and persistence after a force-stop can only be checked on a device.
 
-Two pieces cannot be tested in a browser at all, because a browser has no equivalent of them:
+Three pieces cannot be tested in a browser at all, because a browser has no equivalent of them:
 
 **Gallery permission.** The first release never requested it, which made image picking fail outright on Android 10. That is fixed, but the fix can only be proven on a device running Android 12 or older — newer versions route through the system photo picker, which needs no permission. If you are testing it, revoke the permission in the system settings first, or the dialog will not appear and there is nothing to observe.
 
 **Share to Rak Baca.** `MainActivity` rewrites the incoming `ACTION_SEND` intent into a deep link, because Capacitor does not surface share intents to JavaScript on its own. The parsing on the JavaScript side is covered, but whether the app appears in the system share sheet and whether the rewritten intent arrives intact are device-only questions.
+
+**Where the reading link opens.** The link button on a card uses the same markup as the detail-page link that has shipped since v1.0.0, so the behaviour should at least be consistent. But whether Android hands it to the system browser or keeps it inside the app's own web view cannot be observed from a browser — and if it opens in-app, the user is stuck in a browser with no address bar.
+
+One more thing worth stating plainly: the database moved to version 2 to add the reading-history table. Adding a table is the safest kind of schema change — nothing existing is altered, so no migration runs over your data — and it was verified against a genuine v1 database rather than assumed. It has still never run on a phone.
 
 Not implemented: an AAB bundle for the Play Store.
 

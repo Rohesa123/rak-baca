@@ -1,5 +1,6 @@
 import { db } from './database';
 import type {
+  ProgressUnit,
   ReadingStatus,
   SearchField,
   Taxonomy,
@@ -266,11 +267,14 @@ async function update(id: string, patch: WorkPatch): Promise<void> {
 
 /** Gambar dan berkas penuhnya ikut terhapus, dalam satu transaksi. */
 async function remove(id: string): Promise<void> {
-  await db.transaction('rw', db.works, db.images, db.imageBlobs, async () => {
+  await db.transaction('rw', db.works, db.images, db.imageBlobs, db.readingLog, async () => {
     const imageIds = await db.images.where('workId').equals(id).primaryKeys();
 
     await db.imageBlobs.bulkDelete(imageIds);
     await db.images.where('workId').equals(id).delete();
+    // Riwayat ikut terhapus: entri yang menunjuk karya yang tidak ada lagi
+    // adalah persis jenis data menggantung yang §37 dibuat untuk membersihkan.
+    await db.readingLog.where('workId').equals(id).delete();
     await db.works.delete(id);
   });
 }
@@ -305,8 +309,36 @@ function clampProgress(next: number, total: number | null, previous: number): nu
  * dipanggil langsung dari kartu tanpa membuka form — kalau harus lewat form,
  * pencatatan progres akan berhenti dilakukan setelah minggu pertama.
  */
+/**
+ * Mencatat satu peristiwa membaca.
+ *
+ * **Hanya saat progres bertambah.** Menurunkan angka adalah koreksi salah
+ * ketik, bukan kegiatan membaca — mencatatnya akan membuat "chapter bulan ini"
+ * ikut menghitung perbaikan kesalahan.
+ *
+ * Selisihnya dihitung dari nilai **sesudah dijepit**, bukan dari yang diminta.
+ * Menekan +1 pada karya yang sudah menyentuh totalnya tidak mengubah apa pun,
+ * dan karenanya juga tidak boleh tercatat sebagai membaca.
+ *
+ * Dipanggil dari satu tempat oleh kedua jalur progres, supaya keduanya tidak
+ * bisa berbeda perilaku tanpa ada yang menyadarinya.
+ */
+async function logReading(
+  workId: string,
+  sebelum: number,
+  sesudah: number,
+  unit: ProgressUnit,
+  at: number,
+): Promise<void> {
+  const delta = sesudah - sebelum;
+  if (delta <= 0) return;
+
+  await db.readingLog.add({ id: newId(), workId, at, delta, unit });
+}
+
 async function bumpProgress(id: string, delta = 1): Promise<void> {
   const now = Date.now();
+  const sebelum = await db.works.get(id);
 
   await db.works
     .where(':id')
@@ -329,6 +361,11 @@ async function bumpProgress(id: string, delta = 1): Promise<void> {
         work.finishedAt = now;
       }
     });
+
+  const sesudah = await db.works.get(id);
+  if (sebelum && sesudah) {
+    await logReading(id, sebelum.progressCurrent, sesudah.progressCurrent, sesudah.progressUnit, now);
+  }
 }
 
 export interface BulkClassifyPatch {
@@ -469,8 +506,55 @@ async function moveInManualOrder(
   return true;
 }
 
+/**
+ * Melempar satu karya ke ujung urutan manual.
+ *
+ * Dengan panah saja, memindahkan karya dari posisi seratus ke posisi satu butuh
+ * sembilan puluh sembilan ketukan — yang berarti urutan manual hanya berguna
+ * untuk penataan kecil, bukan untuk menyusun ulang sungguhan.
+ *
+ * Memakai ujung daftar **yang terlihat**, bukan ujung koleksi. Di daftar
+ * terfilter, "paling atas" berarti di atas karya terlihat pertama, bukan
+ * meloncat ke puncak koleksi yang sedang tersembunyi.
+ */
+async function moveToEdgeOfManualOrder(
+  id: string,
+  edge: 'top' | 'bottom',
+  filters: WorkFilters = {},
+): Promise<boolean> {
+  const [semua, terlihat] = await Promise.all([
+    list({ sort: 'manual' }),
+    list({ ...filters, sort: 'manual' }),
+  ]);
+
+  const patokan = edge === 'top' ? terlihat[0] : terlihat[terlihat.length - 1];
+  if (!patokan || patokan.id === id) return false;
+  if (!terlihat.some((work) => work.id === id)) return false;
+
+  const from = semua.findIndex((work) => work.id === id);
+  if (from === -1) return false;
+
+  const [moved] = semua.splice(from, 1);
+  const anchor = semua.findIndex((work) => work.id === patokan.id);
+  if (anchor === -1) return false;
+
+  semua.splice(edge === 'top' ? anchor : anchor + 1, 0, moved);
+
+  const now = Date.now();
+
+  await db.transaction('rw', db.works, async () => {
+    for (const [index, work] of semua.entries()) {
+      if (work.sortOrder === index) continue;
+      await db.works.update(work.id, { sortOrder: index, updatedAt: now });
+    }
+  });
+
+  return true;
+}
+
 async function setProgress(id: string, current: number): Promise<void> {
   const now = Date.now();
+  const sebelum = await db.works.get(id);
 
   await db.works
     .where(':id')
@@ -480,6 +564,11 @@ async function setProgress(id: string, current: number): Promise<void> {
       work.lastReadAt = now;
       work.updatedAt = now;
     });
+
+  const sesudah = await db.works.get(id);
+  if (sebelum && sesudah) {
+    await logReading(id, sebelum.progressCurrent, sesudah.progressCurrent, sesudah.progressUnit, now);
+  }
 }
 
 export const worksRepo = {
@@ -487,6 +576,7 @@ export const worksRepo = {
   findSimilarTitles,
   bulkClassify,
   moveInManualOrder,
+  moveToEdgeOfManualOrder,
   create,
   update,
   remove,

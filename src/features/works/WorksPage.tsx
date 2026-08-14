@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Plus } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -15,16 +15,27 @@ import {
   SORTS,
   SORT_KEY,
   TAXONOMY_KIND_KEY,
+  VIEW_MODE_KEY,
 } from '../../lib/labels';
 import { useT } from '../../i18n/useT';
 import { useUiStore } from '../../stores/ui.store';
+import { VIEW_MODES, useViewModeStore } from '../../stores/viewMode.store';
 import {
   hariTanpaCadangan,
   useBackupReminderStore,
 } from '../../stores/backupReminder.store';
 import { WorkList } from '../../components/work/WorkList';
 import { ContinueReading } from '../../components/work/ContinueReading';
-import { BulkClassifyDialog } from '../../components/work/BulkClassifyDialog';
+/**
+ * Dialog klasifikasi membawa Radix Dialog dan hanya terbuka dari mode pilih,
+ * jadi tidak perlu ikut bundel layar pertama. Pola yang sama dipakai
+ * `CropDialog`.
+ */
+const BulkClassifyDialog = lazy(() =>
+  import('../../components/work/BulkClassifyDialog').then((m) => ({
+    default: m.BulkClassifyDialog,
+  })),
+);
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { FilterChip } from '../../components/ui/FilterChip';
@@ -60,6 +71,9 @@ export function WorksPage() {
   const setSort = useUiStore((s) => s.setSort);
   const resetFilters = useUiStore((s) => s.resetFilters);
   const activeFilterCount = useUiStore((s) => s.activeFilterCount());
+
+  const viewMode = useViewModeStore((s) => s.mode);
+  const setViewMode = useViewModeStore((s) => s.setMode);
 
   const t = useT();
   const navigate = useNavigate();
@@ -131,15 +145,14 @@ export function WorksPage() {
   }
 
   /**
-   * Menggeser satu karya pada urutan manual.
+   * Filter yang sedang aktif, diteruskan ke kedua aksi penggeseran.
    *
-   * Filter yang sedang aktif ikut diteruskan, supaya penggeseran mengikuti apa
-   * yang benar-benar terlihat. Tanpa itu, menggeser sesuatu di daftar terfilter
-   * akan meloncatinya melewati karya yang sedang tersembunyi — dan hasilnya
-   * baru terlihat salah setelah filternya dilepas.
+   * Tanpa ini, menggeser sesuatu di daftar terfilter akan meloncatinya melewati
+   * karya yang sedang tersembunyi — dan hasilnya baru terlihat salah setelah
+   * filternya dilepas.
    */
-  function moveWork(id: string, direction: -1 | 1) {
-    void worksRepo.moveInManualOrder(id, direction, {
+  function manualFilters() {
+    return {
       query,
       searchField,
       typeId,
@@ -150,7 +163,15 @@ export function WorksPage() {
       excludeGenreIds,
       readingStatus: readingStatus ?? undefined,
       favoritesOnly,
-    });
+    };
+  }
+
+  function moveWork(id: string, direction: -1 | 1) {
+    void worksRepo.moveInManualOrder(id, direction, manualFilters());
+  }
+
+  function moveWorkToEdge(id: string, edge: 'top' | 'bottom') {
+    void worksRepo.moveToEdgeOfManualOrder(id, edge, manualFilters());
   }
 
   async function exportSelected() {
@@ -230,6 +251,11 @@ export function WorksPage() {
 
   const byKind = (kind: string) => (taxonomies ?? []).filter((row) => row.kind === kind);
 
+  // Urutan manual memaksa mode Kartu. Panah naik/turun tidak punya tempat di
+  // mode Ringkas maupun Sampul, dan mode yang menyembunyikan satu-satunya cara
+  // menyusun urutan akan terbaca sebagai fitur yang rusak.
+  const modeEfektif = sort === 'manual' ? 'kartu' : viewMode;
+
   const isFiltering = activeFilterCount > 0 || query.trim() !== '';
 
   return (
@@ -299,16 +325,22 @@ export function WorksPage() {
         onConfirm={() => void deleteSelected()}
       />
 
-      <BulkClassifyDialog
-        open={classifyOpen}
-        onOpenChange={setClassifyOpen}
-        workIds={[...selectedIds]}
-        onDone={(changed) => {
-          setClassifyOpen(false);
-          setExportMessage(t('bulk.result', { count: changed }));
-          leaveSelectMode();
-        }}
-      />
+      {/* Fallback kosong: chunk-nya dimuat dari penyimpanan lokal, jadi
+          jedanya terlalu singkat untuk pantas menampilkan indikator. */}
+      <Suspense fallback={null}>
+        {classifyOpen && (
+          <BulkClassifyDialog
+            open={classifyOpen}
+            onOpenChange={setClassifyOpen}
+            workIds={[...selectedIds]}
+            onDone={(changed) => {
+              setClassifyOpen(false);
+              setExportMessage(t('bulk.result', { count: changed }));
+              leaveSelectMode();
+            }}
+          />
+        )}
+      </Suspense>
 
       {/*
         Sengaja tidak lagi disyaratkan `!selectMode`. Aksi yang berhasil memang
@@ -467,6 +499,28 @@ export function WorksPage() {
               </Select>
             </div>
 
+            {/* Tampilan bertetangga dengan urutan: keduanya menjawab
+                pertanyaan yang sama — bagaimana daftar ini disusun. */}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-muted">{t('view.label')}</span>
+              <div className="flex gap-2">
+                {VIEW_MODES.map((value) => (
+                  <Chip
+                    key={value}
+                    active={modeEfektif === value}
+                    onClick={() => setViewMode(value)}
+                  >
+                    {t(VIEW_MODE_KEY[value])}
+                  </Chip>
+                ))}
+              </div>
+              {sort === 'manual' && (
+                <p className="text-xs leading-relaxed text-muted">
+                  {t('view.forcedByManual')}
+                </p>
+              )}
+            </div>
+
             <Select
               id="filter-urutan"
               label={t('works.filterSort')}
@@ -533,7 +587,9 @@ export function WorksPage() {
         ) : (
           <WorkList
             works={works}
+            mode={modeEfektif}
             onMove={sort === 'manual' ? moveWork : undefined}
+            onMoveToEdge={sort === 'manual' ? moveWorkToEdge : undefined}
             taxonomyById={taxonomyById}
             selectable={selectMode}
             selectedIds={selectedIds}

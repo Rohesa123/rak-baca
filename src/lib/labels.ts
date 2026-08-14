@@ -6,6 +6,7 @@ import type {
   TaxonomyKind,
   WorkSort,
 } from '../db/models';
+import type { ViewMode } from '../stores/viewMode.store';
 import type { MessageKey } from '../i18n/messages';
 
 /**
@@ -74,6 +75,12 @@ export const SORTS: readonly WorkSort[] = [
   'progress',
   'manual',
 ];
+
+export const VIEW_MODE_KEY: Record<ViewMode, MessageKey> = {
+  kartu: 'view.kartu',
+  ringkas: 'view.ringkas',
+  sampul: 'view.sampul',
+};
 
 export const SEARCH_FIELDS: readonly SearchField[] = ['all', 'title', 'author'];
 

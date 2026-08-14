@@ -3,7 +3,7 @@ import type { Unzipped, Zippable } from 'fflate';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { db } from '../db/database';
-import type { Taxonomy, Work, WorkImage } from '../db/models';
+import type { ReadingLogEntry, Taxonomy, Work, WorkImage } from '../db/models';
 import { makeThumbnail } from './image';
 import { isNative } from './platform';
 import { newId } from './id';
@@ -26,6 +26,15 @@ interface BackupDocument {
   taxonomies: Taxonomy[];
   works: Work[];
   images: ExportedImage[];
+  /**
+   * Riwayat baca. Opsional karena cadangan yang dibuat sebelum fitur ini ada
+   * tidak memilikinya — dan berkas lama harus tetap bisa diimpor.
+   *
+   * Ikut disertakan meski membesarkan berkas: kehilangan seluruh riwayat
+   * diam-diam saat pindah ponsel lebih merugikan daripada zip yang sedikit
+   * lebih gemuk. Entrinya kecil, sekitar seratus byte masing-masing.
+   */
+  readingLog?: ReadingLogEntry[];
 }
 
 function extensionFor(mimeType: string): string {
@@ -140,6 +149,12 @@ export async function buildExport(options: ExportOptions): Promise<ExportResult>
     exportedImages.push(entry);
   }
 
+  // Riwayat hanya untuk karya yang ikut diekspor. Pada cakupan pilihan,
+  // membawa serta riwayat karya lain berarti mengekspor data yang tidak diminta.
+  const readingLog = (await db.readingLog.toArray()).filter((entry) =>
+    workIds.has(entry.workId),
+  );
+
   const document: BackupDocument = {
     format: BACKUP_FORMAT,
     formatVersion: BACKUP_FORMAT_VERSION,
@@ -150,6 +165,7 @@ export async function buildExport(options: ExportOptions): Promise<ExportResult>
     taxonomies,
     works: selected,
     images: exportedImages,
+    readingLog,
   };
 
   files['data.json'] = [strToU8(JSON.stringify(document, null, 2)), { level: 6 }];
@@ -222,6 +238,8 @@ export interface ImportSummary {
    * padahal justru gambar mereka baru saja dilengkapi.
    */
   imagesBackfilled: number;
+  /** Entri riwayat baca yang ditambahkan. Nol untuk cadangan versi lama. */
+  readingLogAdded: number;
 }
 
 export class BackupFormatError extends Error {
@@ -313,6 +331,11 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
   }
 
   const remap = (id: string | null): string | null => (id ? (idMap.get(id) ?? null) : null);
+
+  // Entri riwayat dicocokkan lewat `id`, sama seperti karya dan gambar.
+  // Mengimpor arsip yang sama dua kali tidak boleh menggandakan riwayatnya.
+  const existingLogIds = new Set(await db.readingLog.toCollection().primaryKeys());
+  const logToAdd = (document.readingLog ?? []).filter((entry) => !existingLogIds.has(entry.id));
 
   const existingWorkIds = new Set(await db.works.toCollection().primaryKeys());
   const worksToAdd: Work[] = [];
@@ -409,7 +432,14 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
 
   // Satu transaksi untuk seluruh penulisan: berkas rusak di tengah jalan tidak
   // boleh meninggalkan koleksi setengah jadi.
-  await db.transaction('rw', db.works, db.taxonomies, db.images, db.imageBlobs, async () => {
+  await db.transaction(
+    'rw',
+    db.works,
+    db.taxonomies,
+    db.images,
+    db.imageBlobs,
+    db.readingLog,
+    async () => {
     if (taxonomiesToAdd.length) await db.taxonomies.bulkAdd(taxonomiesToAdd);
     if (worksToAdd.length) await db.works.bulkAdd(worksToAdd);
     if (imagesToAdd.length) await db.images.bulkPut(imagesToAdd);
@@ -418,7 +448,10 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
     for (const [workId, imageId] of primaryToSet) {
       await db.works.update(workId, { primaryImageId: imageId });
     }
-  });
+
+    if (logToAdd.length) await db.readingLog.bulkAdd(logToAdd);
+  },
+  );
 
   return {
     worksAdded: worksToAdd.length,
@@ -426,5 +459,6 @@ export async function importBackup(file: Blob): Promise<ImportSummary> {
     taxonomiesAdded: taxonomiesToAdd.length,
     imagesAdded: imagesToAdd.length,
     imagesBackfilled,
+    readingLogAdded: logToAdd.length,
   };
 }

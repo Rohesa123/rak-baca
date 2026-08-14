@@ -70,11 +70,12 @@ export function StatsPage() {
   const t = useT();
 
   const data = useLiveQuery(async () => {
-    const [works, taxonomies] = await Promise.all([
+    const [works, taxonomies, log] = await Promise.all([
       db.works.toArray(),
       db.taxonomies.toArray(),
+      db.readingLog.toArray(),
     ]);
-    return computeStats(works, taxonomies);
+    return computeStats(works, taxonomies, log);
   }, []);
 
   if (data === undefined) {
@@ -115,6 +116,53 @@ export function StatsPage() {
           value={data.averageRating === null ? '—' : data.averageRating.toFixed(1)}
         />
       </div>
+
+      {/*
+        Riwayat baru terkumpul setelah aplikasi dipakai. Pemasangan lama mulai
+        dari kosong — tidak ada yang bisa direkonstruksi dari `lastReadAt`, yang
+        hanya menyimpan satu tanda waktu. Karena itu keadaan "belum ada riwayat"
+        dikatakan terus terang, bukan ditampilkan sebagai angka nol yang
+        terlihat seperti kerusakan.
+      */}
+      <section className="mt-7 flex flex-col gap-2">
+        <h2 className="text-sm font-medium text-muted">{t('stats.activity')}</h2>
+
+        {!data.activity.hasHistory ? (
+          <p className="text-sm leading-relaxed text-muted">{t('stats.activityEmpty')}</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Big
+                label={t('stats.streak')}
+                value={t('stats.dayCount', { count: data.activity.streak })}
+              />
+              <Big
+                label={t('stats.activeDays')}
+                value={t('stats.dayCount', { count: data.activity.activeDays })}
+              />
+            </div>
+
+            <ul className="mt-1 flex flex-col gap-1">
+              {data.activity.last7.map(({ unit, total }) => (
+                <li key={`w-${unit}`} className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-ink">
+                    {t('stats.last7', { unit: t(PROGRESS_UNIT_KEY[unit]).toLowerCase() })}
+                  </span>
+                  <span className="text-sm text-muted">{total.toLocaleString()}</span>
+                </li>
+              ))}
+              {data.activity.last30.map(({ unit, total }) => (
+                <li key={`m-${unit}`} className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-ink">
+                    {t('stats.last30', { unit: t(PROGRESS_UNIT_KEY[unit]).toLowerCase() })}
+                  </span>
+                  <span className="text-sm text-muted">{total.toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       {data.finishedThisYear > 0 && (
         <p className="mt-3 text-sm text-muted">

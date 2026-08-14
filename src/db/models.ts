@@ -120,6 +120,27 @@ export interface ImageBlob {
   blob: Blob;
 }
 
+/**
+ * Satu peristiwa membaca: berapa satuan bertambah, dan kapan.
+ *
+ * Dicatat **hanya saat progres bertambah**. Menurunkan angka adalah koreksi
+ * salah ketik, bukan kegiatan membaca; mencatatnya akan membuat "chapter bulan
+ * ini" ikut menghitung perbaikan kesalahan.
+ *
+ * `unit` disalin ke sini alih-alih dibaca ulang dari karyanya, karena satuan
+ * karya bisa berubah di kemudian hari. Riwayat harus merekam apa yang benar
+ * **saat itu**, bukan apa yang benar sekarang.
+ */
+export interface ReadingLogEntry {
+  id: string;
+  workId: string;
+  /** Timestamp saat progres bertambah. */
+  at: number;
+  /** Selisih positif; tidak pernah nol maupun negatif. */
+  delta: number;
+  unit: ProgressUnit;
+}
+
 /** Diturunkan dari data, tidak pernah disimpan. */
 export type ReadingStatus = 'belum' | 'berjalan' | 'selesai';
 

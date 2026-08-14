@@ -78,6 +78,14 @@ export const id = {
   'works.filterType': 'Tipe',
   'works.filterPubStatus': 'Status terbit',
   'works.filterSort': 'Urutkan',
+  // Tampilan dan urutan bertetangga karena keduanya menjawab pertanyaan yang
+  // sama: bagaimana daftar ini disusun.
+  'view.label': 'Tampilan',
+  'view.kartu': 'Kartu',
+  'view.ringkas': 'Ringkas',
+  'view.sampul': 'Sampul',
+  'view.forcedByManual':
+    'Urutan sendiri hanya tersedia pada tampilan Kartu — panah geser tidak muat di dua tampilan lainnya.',
   'works.filterNoType': 'Tanpa tipe',
   'works.filterMustHaveAll': '(harus punya semua)',
   'works.filterCycleHint': 'Ketuk sekali untuk menyertakan, sekali lagi untuk mengecualikan.',
@@ -109,11 +117,13 @@ export const id = {
   'card.favorite': 'Favorit',
   'card.bumpProgress': 'Tambah progres {title}',
   'card.editProgress': 'Ubah progres {title}',
+  'card.openSource': 'Buka tautan baca {title}',
+  'card.openSourceShort': 'Baca',
   'card.moveUp': 'Naikkan {title}',
   'card.moveDown': 'Turunkan {title}',
   // Muncul sekali di atas daftar saat urutan sendiri aktif, bukan di tiap kartu.
   'works.manualHint':
-    'Ketuk panah untuk menggeser. Karya yang belum pernah digeser tetap di bawah, mengikuti urutan terbaru ditambah.',
+    'Ketuk panah untuk menggeser satu langkah, tekan lama untuk melempar ke ujung. Karya yang belum pernah digeser tetap di bawah, mengikuti urutan terbaru ditambah.',
 
   // status baca
   'readingStatus.belum': 'Belum mulai',
@@ -170,6 +180,15 @@ export const id = {
   // Dipisah per satuan: menjumlahkan chapter dengan halaman menghasilkan angka
   // yang terlihat berarti padahal tidak.
   'stats.readSoFar': 'Sudah dibaca',
+  'stats.activity': 'Aktivitas membaca',
+  // Dikatakan terus terang, bukan ditampilkan sebagai nol yang terlihat rusak.
+  'stats.activityEmpty':
+    'Riwayat baca mulai dicatat sejak pembaruan ini. Angkanya akan muncul setelah beberapa hari memakai aplikasi.',
+  'stats.streak': 'Runtun harian',
+  'stats.activeDays': 'Hari aktif',
+  'stats.dayCount': '{count} hari',
+  'stats.last7': '{unit} 7 hari terakhir',
+  'stats.last30': '{unit} 30 hari terakhir',
   'stats.topTypes': 'Tipe terbanyak',
   'stats.topGenres': 'Genre terbanyak',
   'stats.topThemes': 'Tema terbanyak',
@@ -208,6 +227,7 @@ export const id = {
   // apa-apa, padahal gambar karya lama baru saja dilengkapi.
   'settings.backup.importBackfill':
     'Termasuk {count} gambar yang melengkapi karya yang sudah ada.',
+  'settings.backup.importLog': 'Ditambah {count} catatan riwayat baca.',
   'settings.backup.importFailed': 'Gagal membaca cadangan.',
   'backup.reminder':
     'Sudah {days} hari tanpa cadangan. Ekspor sekarang selagi ingat.',
@@ -471,6 +491,12 @@ export const en: Record<MessageKey, string> = {
   'works.filterType': 'Type',
   'works.filterPubStatus': 'Publication status',
   'works.filterSort': 'Sort by',
+  'view.label': 'View',
+  'view.kartu': 'Cards',
+  'view.ringkas': 'Compact',
+  'view.sampul': 'Covers',
+  'view.forcedByManual':
+    'Your own order only works in the Cards view — the move arrows do not fit in the other two.',
   'works.filterNoType': 'No type',
   'works.filterMustHaveAll': '(must have all)',
   'works.filterCycleHint': 'Tap once to include, tap again to exclude.',
@@ -495,10 +521,12 @@ export const en: Record<MessageKey, string> = {
   'card.favorite': 'Favorite',
   'card.bumpProgress': 'Advance progress for {title}',
   'card.editProgress': 'Edit progress for {title}',
+  'card.openSource': 'Open the reading link for {title}',
+  'card.openSourceShort': 'Read',
   'card.moveUp': 'Move {title} up',
   'card.moveDown': 'Move {title} down',
   'works.manualHint':
-    'Tap the arrows to move a title. Anything never moved stays at the bottom, in newest-first order.',
+    'Tap an arrow to move one step, press and hold to send it to the end. Anything never moved stays at the bottom, in newest-first order.',
 
   'readingStatus.belum': 'Not started',
   'readingStatus.berjalan': 'Reading',
@@ -545,6 +573,14 @@ export const en: Record<MessageKey, string> = {
   'stats.avgRating': 'Average score',
   'stats.thisYear': '{count} {count|title|titles} finished this year.',
   'stats.readSoFar': 'Read so far',
+  'stats.activity': 'Reading activity',
+  'stats.activityEmpty':
+    'Reading history starts from this update. Numbers will appear after a few days of use.',
+  'stats.streak': 'Current streak',
+  'stats.activeDays': 'Active days',
+  'stats.dayCount': '{count} {count|day|days}',
+  'stats.last7': '{unit} in the last 7 days',
+  'stats.last30': '{unit} in the last 30 days',
   'stats.topTypes': 'Most common types',
   'stats.topGenres': 'Most common genres',
   'stats.topThemes': 'Most common themes',
@@ -581,6 +617,7 @@ export const en: Record<MessageKey, string> = {
     '{added} {added|title|titles} added, {skipped} skipped as already present, {taxonomies} new catalog {taxonomies|entry|entries}, {images} {images|image|images}.',
   'settings.backup.importBackfill':
     'That includes {count} {count|image|images} filled in on titles you already had.',
+  'settings.backup.importLog': 'Plus {count} reading history {count|entry|entries}.',
   'settings.backup.importFailed': 'Could not read that backup.',
   'backup.reminder':
     'It has been {days} days since your last backup. Export now while you think of it.',

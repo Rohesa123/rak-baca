@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { FocusEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router';
-import { Check, ChevronDown, ChevronUp, Plus, Star } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, ExternalLink, Plus, Star } from 'lucide-react';
 import type { Taxonomy, Work } from '../../db/models';
 import { isProgressAtEnd, readingStatus, worksRepo } from '../../db/works.repo';
 import {
@@ -26,8 +26,16 @@ interface WorkCardProps {
    * dicari, dan tiga tombol berjajar di kartu selebar ponsel jadi terlalu rapat.
    */
   onMove?: (direction: -1 | 1) => void;
+  /** Tekan-lama pada panah. Lihat catatan di tombolnya. */
+  onMoveToEdge?: (edge: 'top' | 'bottom') => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  /**
+   * `ringkas` memangkas judul alternatif, penulis, dan chip — menyisakan
+   * sampul kecil, judul, dan progres. Kendali yang tersisa hanya `+1` dan
+   * tautan sumber; keduanya satu ketukan dan tidak menuntut ruang baca.
+   */
+  compact?: boolean;
 }
 
 export function WorkCard({
@@ -37,8 +45,10 @@ export function WorkCard({
   selected = false,
   onToggleSelect,
   onMove,
+  onMoveToEdge,
   canMoveUp = false,
   canMoveDown = false,
+  compact = false,
 }: WorkCardProps) {
   const t = useT();
   const type = work.typeId ? taxonomyById.get(work.typeId) : undefined;
@@ -148,7 +158,7 @@ export function WorkCard({
       <WorkCover
         imageId={work.primaryImageId}
         alt={`Sampul ${work.title}`}
-        className="h-20 w-14"
+        className={compact ? 'h-12 w-8' : 'h-20 w-14'}
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -164,16 +174,22 @@ export function WorkCard({
             )}
           </div>
 
-          {showAltTitle && <p className="truncate text-xs text-muted">{work.altTitle}</p>}
-          {work.author && <p className="truncate text-sm text-muted">{work.author}</p>}
+          {!compact && showAltTitle && (
+            <p className="truncate text-xs text-muted">{work.altTitle}</p>
+          )}
+          {!compact && work.author && (
+            <p className="truncate text-sm text-muted">{work.author}</p>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {type && <StaticChip>{type.name}</StaticChip>}
-          {pubStatus && <StaticChip color={pubStatus.color}>{pubStatus.name}</StaticChip>}
-          {status && <StaticChip>{t(READING_STATUS_KEY[status])}</StaticChip>}
-          {work.personalRating !== null && <StaticChip>★ {work.personalRating}</StaticChip>}
-        </div>
+        {!compact && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {type && <StaticChip>{type.name}</StaticChip>}
+            {pubStatus && <StaticChip color={pubStatus.color}>{pubStatus.name}</StaticChip>}
+            {status && <StaticChip>{t(READING_STATUS_KEY[status])}</StaticChip>}
+            {work.personalRating !== null && <StaticChip>★ {work.personalRating}</StaticChip>}
+          </div>
+        )}
 
         {tracksProgress &&
           (selectable ? <p className="text-xs text-muted">{progressText}</p> : progressSlot)}
@@ -217,7 +233,11 @@ export function WorkCard({
     baliknya; kontrol yang memang perlu ditekan menyalakannya kembali sendiri.
   */
   return (
-    <div className="relative flex gap-3 rounded-xl border border-border bg-elevated p-3">
+    <div
+      className={`relative flex gap-3 rounded-xl border border-border bg-elevated ${
+        compact ? 'p-2' : 'p-3'
+      }`}
+    >
       <Link
         to={`/karya/${work.id}`}
         aria-label={t('card.open', { title: work.title })}
@@ -230,12 +250,47 @@ export function WorkCard({
         Inilah aksi yang paling sering dipakai — kalau harus lewat form,
         pencatatan progres berhenti setelah minggu pertama.
       */}
+      {/*
+        Tautan sumber, satu ketukan dari daftar.
+        Sebelumnya hanya ada di halaman detail, sehingga "lanjutkan membaca" —
+        gerakan yang paling sering dilakukan di aplikasi ini — butuh dua
+        ketukan. Muncul hanya kalau tautannya memang terisi: ikon mati yang
+        selalu ada lebih membingungkan daripada ikon yang kadang tidak muncul.
+
+        Sengaja <a> tersendiri, bukan di dalam tautan kartu yang membentang:
+        <a> di dalam <a> bukan HTML yang sah, dan mengetuknya tidak boleh ikut
+        membuka halaman detail.
+      */}
+      {work.sourceUrl && (
+        <a
+          href={work.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t('card.openSource', { title: work.title })}
+          className="relative flex h-11 w-9 shrink-0 items-center justify-center self-center rounded-xl text-muted active:bg-border"
+        >
+          <ExternalLink size={17} aria-hidden="true" />
+        </a>
+      )}
+
       {onMove ? (
         <div className="relative flex shrink-0 flex-col justify-center gap-1">
           <button
             type="button"
             aria-label={t('card.moveUp', { title: work.title })}
             onClick={() => onMove(-1)}
+            /*
+              Tekan-lama melempar ke ujung. Tidak terlihat dengan sendirinya —
+              itu kelemahan nyata dari pilihan ini — jadi penjelasannya
+              dititipkan ke petunjuk yang sudah muncul saat urutan manual aktif.
+              Menambah tombol ketiga di kartu selebar ponsel dinilai lebih
+              merugikan daripada satu kalimat di petunjuk yang sudah dibaca.
+            */
+            onContextMenu={(event) => {
+              // Tekan-lama di Android memunculkan menu konteks lebih dulu.
+              event.preventDefault();
+              onMoveToEdge?.('top');
+            }}
             disabled={!canMoveUp}
             className="flex h-8 w-11 items-center justify-center rounded-lg bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-25"
           >
@@ -245,6 +300,10 @@ export function WorkCard({
             type="button"
             aria-label={t('card.moveDown', { title: work.title })}
             onClick={() => onMove(1)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              onMoveToEdge?.('bottom');
+            }}
             disabled={!canMoveDown}
             className="flex h-8 w-11 items-center justify-center rounded-lg bg-surface text-brand active:bg-border disabled:pointer-events-none disabled:opacity-25"
           >

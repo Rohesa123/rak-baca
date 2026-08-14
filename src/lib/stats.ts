@@ -1,9 +1,27 @@
 import { readingStatus } from '../db/works.repo';
-import type { ProgressUnit, ReadingStatus, Taxonomy, Work } from '../db/models';
+import type {
+  ProgressUnit,
+  ReadingLogEntry,
+  ReadingStatus,
+  Taxonomy,
+  Work,
+} from '../db/models';
 
 export interface Tally {
   name: string;
   count: number;
+}
+
+export interface ReadingActivity {
+  /** Total per satuan dalam 7 dan 30 hari terakhir. */
+  last7: Array<{ unit: ProgressUnit; total: number }>;
+  last30: Array<{ unit: ProgressUnit; total: number }>;
+  /** Hari berturut-turut membaca, dihitung mundur dari hari ini. */
+  streak: number;
+  /** Berapa hari berbeda yang punya catatan sama sekali. */
+  activeDays: number;
+  /** `false` kalau belum ada satu pun catatan — bedakan dari "nol chapter". */
+  hasHistory: boolean;
 }
 
 export interface CollectionStats {
@@ -21,6 +39,7 @@ export interface CollectionStats {
   topTypes: Tally[];
   topGenres: Tally[];
   topThemes: Tally[];
+  activity: ReadingActivity;
 }
 
 const BATAS_TERATAS = 5;
@@ -32,16 +51,64 @@ function teratas(hitungan: Map<string, number>, byId: Map<string, Taxonomy>): Ta
     .slice(0, BATAS_TERATAS);
 }
 
+const HARI = 24 * 60 * 60 * 1000;
+
+/** Kunci hari lokal, supaya "hari ini" mengikuti jam pengguna bukan UTC. */
+function kunciHari(at: number): string {
+  const d = new Date(at);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/**
+ * Merangkum riwayat baca.
+ *
+ * **Runtun dihitung mundur dari hari ini, dan hari ini boleh kosong.** Membaca
+ * pada pukul 23.00 lalu memeriksa statistik pukul 08.00 keesokan harinya tidak
+ * boleh menampilkan runtun yang sudah putus — runtunnya baru putus setelah satu
+ * hari penuh terlewat tanpa catatan.
+ */
+export function computeActivity(log: ReadingLogEntry[], now = Date.now()): ReadingActivity {
+  const jumlahkan = (sejak: number) => {
+    const per = new Map<ProgressUnit, number>();
+    for (const entry of log) {
+      if (entry.at < sejak) continue;
+      per.set(entry.unit, (per.get(entry.unit) ?? 0) + entry.delta);
+    }
+    return [...per.entries()]
+      .map(([unit, total]) => ({ unit, total }))
+      .sort((a, b) => b.total - a.total);
+  };
+
+  const hariBerisi = new Set(log.map((entry) => kunciHari(entry.at)));
+
+  let streak = 0;
+  // Dimulai dari kemarin kalau hari ini masih kosong; lihat catatan di atas.
+  let cursor = hariBerisi.has(kunciHari(now)) ? now : now - HARI;
+  while (hariBerisi.has(kunciHari(cursor))) {
+    streak += 1;
+    cursor -= HARI;
+  }
+
+  return {
+    last7: jumlahkan(now - 7 * HARI),
+    last30: jumlahkan(now - 30 * HARI),
+    streak,
+    activeDays: hariBerisi.size,
+    hasHistory: log.length > 0,
+  };
+}
+
 /**
  * Menghitung ringkasan koleksi.
  *
  * Fungsi murni: menerima data dan mengembalikan angka, tanpa menyentuh database
- * maupun jam sistem sendiri. Waktu dilewatkan sebagai argumen supaya
- * "selesai tahun ini" bisa diuji tanpa menunggu pergantian tahun.
+ * maupun jam sistem sendiri. Waktu dilewatkan sebagai argumen supaya "selesai
+ * tahun ini" dan runtun harian bisa diuji tanpa menunggu pergantian hari.
  */
 export function computeStats(
   works: Work[],
   taxonomies: Taxonomy[],
+  log: ReadingLogEntry[] = [],
   now = Date.now(),
 ): CollectionStats {
   const byId = new Map(taxonomies.map((row) => [row.id, row]));
@@ -107,5 +174,6 @@ export function computeStats(
     topTypes: teratas(perType, byId),
     topGenres: teratas(perGenre, byId),
     topThemes: teratas(perTheme, byId),
+    activity: computeActivity(log, now),
   };
 }

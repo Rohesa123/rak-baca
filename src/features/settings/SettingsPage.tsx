@@ -189,6 +189,10 @@ export function SettingsPage() {
         lines.push(t('settings.backup.importBackfill', { count: summary.imagesBackfilled }));
       }
 
+      if (summary.readingLogAdded > 0) {
+        lines.push(t('settings.backup.importLog', { count: summary.readingLogAdded }));
+      }
+
       setBackupMessage(lines.join(' '));
     } catch (error) {
       // Dikenali lewat `name`, bukan `instanceof`: kelasnya berada di modul

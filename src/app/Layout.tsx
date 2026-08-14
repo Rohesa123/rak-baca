@@ -11,6 +11,7 @@ import { useImageQualityStore } from '../stores/imageQuality.store';
 import { useLanguageStore } from '../stores/language.store';
 import { useBackupReminderStore } from '../stores/backupReminder.store';
 import { useLockStore } from '../stores/lock.store';
+import { useViewModeStore } from '../stores/viewMode.store';
 import { LockScreen } from '../components/ui/LockScreen';
 import { isNative } from '../lib/platform';
 import { readSharedFromUrl } from '../lib/shareIntent';
@@ -51,6 +52,7 @@ export function Layout() {
     void useLanguageStore.getState().hydrate();
     void useBackupReminderStore.getState().hydrate();
     void useLockStore.getState().hydrate();
+    void useViewModeStore.getState().hydrate();
   }, []);
 
   // Kiriman dari lembar "Bagikan" milik Android.
